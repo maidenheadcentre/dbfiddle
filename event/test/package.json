@@ -1,0 +1,8 @@
+{
+  "name": "name",
+  "version": "0.0.0",
+  "dependencies": {
+    "@sentry/aws-serverless": "^8.47.0",
+    "postgres": "^3.4.5"
+  }
+}

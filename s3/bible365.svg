@@ -1,0 +1,8 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+<rect x="8" y="4" width="27" height="32" rx="1" stroke="black" fill="transparent" />
+<line x1="10" y1="4" x2="10" y2="36" stroke="black" stroke-width="3"/>
+<path stroke="black" fill="gold" d="M 21,8 h 4 v 5 h 5 v 4 h -5 v 12 h -4 v -12 h -5 v -4 h 5 z" />
+<path stroke="black" fill="transparent" d="M 28,36 v 3 l 2,-1 l 2,1 v -3" />
+</svg>

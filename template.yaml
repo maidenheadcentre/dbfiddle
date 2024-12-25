@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31  
+Parameters:
+  Domain:
+    Type: String
+  Email:
+    Type: String
+  Schedule:
+    Type: String
+  Pass:
+    Type: String
+  Environment:
+    Type: String
+  DB:
+    Type: String
+  Sentry:
+    Type: String
+  Certificate:
+    Type: String
+  Zone:
+    Type: String
+  Log:
+    Type: String
+Globals:
+  HttpApi:
+    AccessLogSettings:
+      DestinationArn: !Sub '${Log}${Environment}'
+      Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "error.message":"$context.error.message", "integration.error":"$context.integration.error" }'
+    Domain:
+      DomainName: !Sub '${Domain}'
+      CertificateArn: !Ref Certificate
+      Route53:
+        HostedZoneId: !Ref Zone
+  Function:
+    Runtime: nodejs22.x
+    MemorySize: 128
+    Architectures: 
+      - arm64
+    EventInvokeConfig:
+      MaximumRetryAttempts: 0
+    VpcConfig:
+      SubnetIds:
+        - subnet-0465e23d91c0259f3
+      SecurityGroupIds:
+        - sg-0035d96573bf2b200
+    Environment:
+      Variables:
+        PGHOST: !Ref DB
+        PGDATABASE: "fiddle"
+        PGUSER: lambda
+        PGPASSWORD: !Ref Pass
+        ADMINEMAIL: !Ref Email
+        SENTRY: !Ref Sentry
+
+Resources:
+
+  homeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 5
+      MemorySize: 512
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/home/
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: GET
+
+  fiddleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 30
+      MemorySize: 512
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/fiddle/
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{code}
+            Method: GET
+
+  runFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 30
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/run/
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /run
+            Method: POST
+
+  testFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 60
+      Policies: 
+        - AWSLambdaVPCAccessExecutionRole
+      CodeUri: event/test/
+      Handler: index.handler
+      Events:
+        CWSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref Schedule
+
+  downFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 60
+      Policies: 
+        - AWSLambdaVPCAccessExecutionRole
+        - AmazonSESFullAccess
+      CodeUri: event/down/
+      Handler: index.handler
+      Events:
+        CWSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref Schedule
+
+  staticFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 5
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/static
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /static/{filename}
+            Method: GET
+            
+Outputs:
+  fiddle:
+    Description: "API Gateway endpoint URL for $default stage"
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"

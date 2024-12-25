@@ -1,0 +1,8 @@
+main { margin: 1rem 2vmax; }
+table { margin: 1rem 0; }
+td, th { border: 1px solid silver; padding: 6px; }
+td { text-align: right; }
+td:nth-child(1) { text-align: left; }
+details td:nth-child(2) { text-align: center; }
+details { margin: 1rem 0; }
+li { margin-top : 0.5rem; }

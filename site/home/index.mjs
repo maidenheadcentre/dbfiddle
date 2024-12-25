@@ -39,7 +39,8 @@ export const handler = async (event) => {
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
   <link href="static/global.2531dfe9.css" rel="stylesheet">
-  <link href="static/home.f5431712.css" rel="stylesheet">
+  <link href="static/home.6892fdc2.css" rel="stylesheet">
+  <script src="/static/home.2ce1b277.js" defer></script>
   <script type="module" src="static/light.6d47cbec.js"></script>
 </head>
 <body>
@@ -55,29 +56,45 @@ export const handler = async (event) => {
   </header>
   <main>
     <div>fiddles have been created from about ${(100 * Math.round(data.source_total_count*1.5/100)).toLocaleString()} distinct IP addresses</div>
-    <table>
-      <thead>
-      <tr><th rowspan="2">engine</th><th colspan="3">fiddles created</th></tr>
-      <tr><th>all time</th><th>90 day</th><th>7 day</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Total</td>
-          <td>${totals.total.toLocaleString()}</td>
-          <td>${totals.total_90.toLocaleString()}</td>
-          <td>${totals.total_7.toLocaleString()}</td>
-        </tr>
-      </tbody>
-      <tbody>${data.engines.reduce((p,c) => /*html*/`${p}
-        <tr>
-          <td><a href="/${Buffer.from(c.engine_fiddle_code,'hex').toString('base64url')}">${c.engine_name}</a></td>
-          <td>${c.engine_total.toLocaleString()}</td>
-          <td>${c.engine_total_90.toLocaleString()}</td>
-          <td>${c.engine_total_7.toLocaleString()}</td>
-        </tr>`, '')}
-      </tbody>
-    </table>
-    <details>
+    <div style="display: flex; align-items: flex-start; flex-wrap: wrap;">
+      <table style="margin-bottom: -58px;">
+        <thead>
+        <tr><th rowspan="2">engine</th><th colspan="3">fiddles created</th></tr>
+        <tr><th>all time</th><th>90 day</th><th>7 day</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Total</td>
+            <td>${totals.total.toLocaleString()}</td>
+            <td>${totals.total_90.toLocaleString()}</td>
+            <td>${totals.total_7.toLocaleString()}</td>
+          </tr>
+        </tbody>
+        <tbody>${data.engines.reduce((p,engine,index) => /*html*/`${p}
+          <tr>
+            <td><a href="/${Buffer.from(engine.engine_fiddle_code,'hex').toString('base64url')}">${engine.engine_name}</a></td>
+            <td>${engine.engine_total.toLocaleString()}</td>
+            <td>${engine.engine_total_90.toLocaleString()}</td>
+            <td>${engine.engine_total_7.toLocaleString()}</td>
+            <td><input type="radio" name="version" value="${engine.engine_code}"${index === 0 ? ' checked' : ''}></td>
+          </tr>`, '')}
+        </tbody>
+      </table>${data.engines.reduce((p,engine,index) => /*html*/`${p}
+      <table data-engine="${engine.engine_code}" style="margin-top: 74px; margin-bottom: -58px;"${index === 0 ? '' : ' hidden'}>
+        <thead>
+          <tr><th>version</th><th>all time</th><th>90 day</th><th>7 day</th></tr>
+        </thead>
+        <tbody>${engine.versions.reduce((p,version) => /*html*/`${p}
+          <tr>
+            <td>${version.fiddle_code ? /*html*/`<a href="/${Buffer.from(version.fiddle_code,'hex').toString('base64url')}">${version.name}</a>` : version.name }</td>
+            <td>${version.total.toLocaleString()}</td>
+            <td>${version.total90.toLocaleString()}</td>
+            <td>${version.total7.toLocaleString()}</td>
+          </tr>`, '')}
+        </tbody>
+      </table>`, '')}
+    </div>
+    <details style="margin-top: 74px;">
       <summary>status <x-light></x-light>${data.alloweds.reduce((p,c) => c.is_down ? p : p = p+1, 0)} <x-light red></x-light>${data.alloweds.reduce((p,c) => c.is_down ? p = p+1 : p, 0)}</summary>
       <table>
         <thead>

@@ -1,8 +1,16 @@
-main { margin: 1rem 2vmax; }
-table { margin: 1rem 0; }
+main { margin: 16px 2vmax; }
+table { margin: 16px 0; }
 td, th { border: 1px solid silver; padding: 6px; }
-td { text-align: right; }
-td:nth-child(1) { text-align: left; }
-details td:nth-child(2) { text-align: center; }
-details { margin: 1rem 0; }
-li { margin-top : 0.5rem; }
+td {
+  text-align: right;
+  white-space: nowrap;
+  &:nth-child(1) { text-align: left; }
+  &:has(input) { border: none; }
+  & input { margin-right: 30px; }
+}
+details {
+  margin: 16px 0;
+  & td:nth-child(2) { text-align: center; }
+  & li { margin-top : 8px; }
+}
+

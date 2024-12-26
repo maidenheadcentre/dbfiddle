@@ -3,7 +3,7 @@ table {
   margin: 16px 0;
   @media only screen and (max-device-width: 480px){ & { font-size: 14px; } }
 }
-td, th { border: 1px solid silver; padding: 5px; white-space: nowrap; }
+td, th { border: 1px solid silver; padding: 6px; white-space: nowrap; }
 td {
   text-align: right;
   &:nth-child(1) { text-align: left; }

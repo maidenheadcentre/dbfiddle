@@ -23,12 +23,12 @@ export const handler = async (event) => {
 
   // redirect engine name link (eg "/?engine=postgres") to default fiddle
   if( qp && Object.hasOwn(qp,'engine') ) {
-    const code = data.engines.find(e => e.engine_code===qp.engine)?.engine_fiddle_code;
+    const code = data.engines.find(e => e.code===qp.engine)?.fiddle;
     if(code) return { statusCode: 302, headers: { 'Location': `/${Buffer.from(code, 'hex').toString('base64url')}` } };
     return { statusCode: 404, body: JSON.stringify('not found') };
   }
 
-  const totals = data.engines.reduce((p,c) => ({ total: p.total + c.engine_total, total_90: p.total_90 + c.engine_total_90, total_7: p.total_7 + c.engine_total_7, total1: p.total1 + c.total1 }), { total: 0, total_90: 0, total_7: 0, total1: 0 });
+  const totals = data.engines.reduce((p,c) => ({ total: p.total + c.total, total90: p.total90 + c.total90, total7: p.total7 + c.total7, total1: p.total1 + c.total1 }), { total: 0, total90: 0, total7: 0, total1: 0 });
 
   const body = /*html*/`<!DOCTYPE html>
 <html>
@@ -39,7 +39,7 @@ export const handler = async (event) => {
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
   <link href="static/global.2531dfe9.css" rel="stylesheet">
-  <link href="static/home.22af8a9c.css" rel="stylesheet">
+  <link href="static/home.07a7e83d.css" rel="stylesheet">
   <script src="/static/home.2ce1b277.js" defer></script>
   <script type="module" src="static/light.6d47cbec.js"></script>
 </head>
@@ -66,29 +66,29 @@ export const handler = async (event) => {
           <tr>
             <td>Total</td>
             <td>${totals.total.toLocaleString()}</td>
-            <td>${totals.total_90.toLocaleString()}</td>
-            <td>${totals.total_7.toLocaleString()}</td>
+            <td>${totals.total90.toLocaleString()}</td>
+            <td>${totals.total7.toLocaleString()}</td>
             <td>${totals.total1.toLocaleString()}</td>
           </tr>
         </tbody>
         <tbody>${data.engines.reduce((p,engine,index) => /*html*/`${p}
           <tr>
-            <td><a href="/${Buffer.from(engine.engine_fiddle_code,'hex').toString('base64url')}">${engine.engine_name}</a></td>
-            <td>${engine.engine_total.toLocaleString()}</td>
-            <td>${engine.engine_total_90.toLocaleString()}</td>
-            <td>${engine.engine_total_7.toLocaleString()}</td>
+            <td><a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}">${engine.name}</a></td>
+            <td>${engine.total.toLocaleString()}</td>
+            <td>${engine.total90.toLocaleString()}</td>
+            <td>${engine.total7.toLocaleString()}</td>
             <td>${engine.total1.toLocaleString()}</td>
-            <td><input type="radio" name="version" value="${engine.engine_code}"${index === 0 ? ' checked' : ''}></td>
+            <td><input type="radio" name="version" value="${engine.code}"${index === 0 ? ' checked' : ''}></td>
           </tr>`, '')}
         </tbody>
       </table>${data.engines.reduce((p,engine,index) => /*html*/`${p}
-      <table data-engine="${engine.engine_code}"${index === 0 ? '' : ' hidden'}>
+      <table data-engine="${engine.code}"${index === 0 ? '' : ' hidden'}>
         <thead>
           <tr><th>version</th><th>all time</th><th>90 day</th><th>7 day</th><th>today</th></tr>
         </thead>
         <tbody>${engine.versions.reduce((p,version) => /*html*/`${p}
           <tr>
-            <td>${version.fiddle_code ? /*html*/`<a href="/${Buffer.from(version.fiddle_code,'hex').toString('base64url')}">${version.name}</a>` : version.name }</td>
+            <td>${version.fiddle ? /*html*/`<a href="/${Buffer.from(version.fiddle,'hex').toString('base64url')}">${version.name}</a>` : version.name }</td>
             <td>${version.total.toLocaleString()}</td>
             <td>${version.total90.toLocaleString()}</td>
             <td>${version.total7.toLocaleString()}</td>

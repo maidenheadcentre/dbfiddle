@@ -1,4 +1,4 @@
-main { margin: 16px 2vmax; }
+main { margin: 16px; }
 table { margin: 16px 0; font-size: 14px; }
 td, th { border: 1px solid silver; padding: 5px; white-space: nowrap; }
 td {

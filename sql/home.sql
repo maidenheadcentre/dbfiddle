@@ -11,11 +11,11 @@ create function get() returns jsonb as $$
       , ( select json_agg(z order by engine_total_90 desc)
           from
             ( select
-                engine_code
-              , engine_name
-              , engine_total
-              , engine_total_90
-              , engine_total_7
+                engine_code code
+              , engine_name "name"
+              , engine_total total
+              , engine_total_90 total90
+              , engine_total_7 total7
               , engine_total_today total1
               , ( select encode(fiddle_code,'hex')
                   from fiddle f
@@ -24,7 +24,20 @@ create function get() returns jsonb as $$
                     f.version_code=e.engine_default_version_code and 
                     f.sample_name='' and
                     f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
-                ) engine_fiddle_code
+                ) fiddle
+              , engine_code -- delete
+              , engine_name -- delete
+              , engine_total -- delete
+              , engine_total_90 -- delete
+              , engine_total_7 -- delete
+              , ( select encode(fiddle_code,'hex')
+                  from fiddle f
+                  where
+                    f.engine_code=e.engine_code and
+                    f.version_code=e.engine_default_version_code and 
+                    f.sample_name='' and
+                    f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
+                ) engine_fiddle_code -- delete
               , ( select json_agg(z order by total90 desc)
                   from
                     ( select
@@ -42,7 +55,16 @@ create function get() returns jsonb as $$
                             f.version_code=v.version_code and 
                             f.sample_name='' and
                             f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
-                        ) fiddle_code
+                        ) fiddle
+                      , ( select encode(fiddle_code,'hex')
+                          from fiddle f
+                          where
+                            v.version_is_active and
+                            f.engine_code=v.engine_code and
+                            f.version_code=v.version_code and 
+                            f.sample_name='' and
+                            f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
+                        ) fiddle_code -- delete
                       from
                         version v
                         natural join

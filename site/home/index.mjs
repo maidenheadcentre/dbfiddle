@@ -39,7 +39,7 @@ export const handler = async (event) => {
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
   <link href="static/global.2531dfe9.css" rel="stylesheet">
-  <link href="static/home.07a7e83d.css" rel="stylesheet">
+  <link href="static/home.645f6a11.css" rel="stylesheet">
   <script src="/static/home.2ce1b277.js" defer></script>
   <script type="module" src="static/light.6d47cbec.js"></script>
 </head>

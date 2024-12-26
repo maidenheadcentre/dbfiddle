@@ -8,7 +8,7 @@ create function get() returns jsonb as $$
   from
     ( select
         coalesce(reltuples::integer,0) source_total_count
-      , ( select json_agg(z order by engine_total_90 desc)
+      , ( select json_agg(z order by total90 desc)
           from
             ( select
                 engine_code code
@@ -25,19 +25,6 @@ create function get() returns jsonb as $$
                     f.sample_name='' and
                     f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
                 ) fiddle
-              , engine_code -- delete
-              , engine_name -- delete
-              , engine_total -- delete
-              , engine_total_90 -- delete
-              , engine_total_7 -- delete
-              , ( select encode(fiddle_code,'hex')
-                  from fiddle f
-                  where
-                    f.engine_code=e.engine_code and
-                    f.version_code=e.engine_default_version_code and 
-                    f.sample_name='' and
-                    f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
-                ) engine_fiddle_code -- delete
               , ( select json_agg(z order by total90 desc)
                   from
                     ( select
@@ -56,15 +43,6 @@ create function get() returns jsonb as $$
                             f.sample_name='' and
                             f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
                         ) fiddle
-                      , ( select encode(fiddle_code,'hex')
-                          from fiddle f
-                          where
-                            v.version_is_active and
-                            f.engine_code=v.engine_code and
-                            f.version_code=v.version_code and 
-                            f.sample_name='' and
-                            f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
-                        ) fiddle_code -- delete
                       from
                         version v
                         natural join

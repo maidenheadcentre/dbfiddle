@@ -1,9 +1,8 @@
 main { margin: 16px 2vmax; }
-table { margin: 16px 0; }
-td, th { border: 1px solid silver; padding: 6px; }
+table { margin: 16px 0; font-size: 14px; }
+td, th { border: 1px solid silver; padding: 5px; white-space: nowrap; }
 td {
   text-align: right;
-  white-space: nowrap;
   &:nth-child(1) { text-align: left; }
   &:has(input) { border: none; }
   & input { margin-right: 30px; }

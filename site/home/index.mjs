@@ -28,7 +28,7 @@ export const handler = async (event) => {
     return { statusCode: 404, body: JSON.stringify('not found') };
   }
 
-  const totals = data.engines.reduce((p,c) => ({ total: p.total + c.engine_total, total_90: p.total_90 + c.engine_total_90, total_7: p.total_7 + c.engine_total_7 }), { total: 0, total_90: 0, total_7: 0 });
+  const totals = data.engines.reduce((p,c) => ({ total: p.total + c.engine_total, total_90: p.total_90 + c.engine_total_90, total_7: p.total_7 + c.engine_total_7, total1: p.total1 + c.total1 }), { total: 0, total_90: 0, total_7: 0, total1: 0 });
 
   const body = /*html*/`<!DOCTYPE html>
 <html>
@@ -39,7 +39,7 @@ export const handler = async (event) => {
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
   <link href="static/global.2531dfe9.css" rel="stylesheet">
-  <link href="static/home.6892fdc2.css" rel="stylesheet">
+  <link href="static/home.22af8a9c.css" rel="stylesheet">
   <script src="/static/home.2ce1b277.js" defer></script>
   <script type="module" src="static/light.6d47cbec.js"></script>
 </head>
@@ -59,8 +59,8 @@ export const handler = async (event) => {
     <div style="display: flex; align-items: flex-start; flex-wrap: wrap;">
       <table>
         <thead>
-        <tr><th rowspan="2">engine</th><th colspan="3">fiddles created</th></tr>
-        <tr><th>all time</th><th>90 day</th><th>7 day</th></tr>
+        <tr><th rowspan="2">engine</th><th colspan="4">fiddles created</th></tr>
+        <tr><th>all time</th><th>90 day</th><th>7 day</th><th>today</th></tr>
         </thead>
         <tbody>
           <tr>
@@ -68,6 +68,7 @@ export const handler = async (event) => {
             <td>${totals.total.toLocaleString()}</td>
             <td>${totals.total_90.toLocaleString()}</td>
             <td>${totals.total_7.toLocaleString()}</td>
+            <td>${totals.total1.toLocaleString()}</td>
           </tr>
         </tbody>
         <tbody>${data.engines.reduce((p,engine,index) => /*html*/`${p}
@@ -76,13 +77,14 @@ export const handler = async (event) => {
             <td>${engine.engine_total.toLocaleString()}</td>
             <td>${engine.engine_total_90.toLocaleString()}</td>
             <td>${engine.engine_total_7.toLocaleString()}</td>
+            <td>${engine.total1.toLocaleString()}</td>
             <td><input type="radio" name="version" value="${engine.engine_code}"${index === 0 ? ' checked' : ''}></td>
           </tr>`, '')}
         </tbody>
       </table>${data.engines.reduce((p,engine,index) => /*html*/`${p}
       <table data-engine="${engine.engine_code}"${index === 0 ? '' : ' hidden'}>
         <thead>
-          <tr><th>version</th><th>all time</th><th>90 day</th><th>7 day</th></tr>
+          <tr><th>version</th><th>all time</th><th>90 day</th><th>7 day</th><th>today</th></tr>
         </thead>
         <tbody>${engine.versions.reduce((p,version) => /*html*/`${p}
           <tr>
@@ -90,6 +92,7 @@ export const handler = async (event) => {
             <td>${version.total.toLocaleString()}</td>
             <td>${version.total90.toLocaleString()}</td>
             <td>${version.total7.toLocaleString()}</td>
+            <td>${version.total1.toLocaleString()}</td>
           </tr>`, '')}
         </tbody>
       </table>`, '')}

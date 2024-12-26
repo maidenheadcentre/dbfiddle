@@ -16,6 +16,7 @@ create function get() returns jsonb as $$
               , engine_total
               , engine_total_90
               , engine_total_7
+              , engine_total_today total1
               , ( select encode(fiddle_code,'hex')
                   from fiddle f
                   where
@@ -32,6 +33,7 @@ create function get() returns jsonb as $$
                       , version_total total
                       , version_total_90 total90
                       , version_total_7 total7
+                      , version_total_today total1
                       , ( select encode(fiddle_code,'hex')
                           from fiddle f
                           where
@@ -50,6 +52,7 @@ create function get() returns jsonb as $$
                             , coalesce(sum(fiddle_daily_count),0)::integer version_total
                             , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-90)),0)::integer version_total_90
                             , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-7)),0)::integer version_total_7
+                            , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on>=current_date)),0)::integer version_total_today
                             from fiddle_daily d
                             group by engine_code, version_code
                           ) z
@@ -64,6 +67,7 @@ create function get() returns jsonb as $$
                     , coalesce(sum(fiddle_daily_count),0)::integer engine_total
                     , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-90)),0)::integer engine_total_90
                     , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-7)),0)::integer engine_total_7
+                    , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on>=current_date)),0)::integer engine_total_today
                     from fiddle_daily
                     group by engine_code
                   ) z

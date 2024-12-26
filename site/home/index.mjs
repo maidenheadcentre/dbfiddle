@@ -57,7 +57,7 @@ export const handler = async (event) => {
   <main>
     <div>fiddles have been created from about ${(100 * Math.round(data.source_total_count*1.5/100)).toLocaleString()} distinct IP addresses</div>
     <div style="display: flex; align-items: flex-start; flex-wrap: wrap;">
-      <table style="margin-bottom: -58px;">
+      <table>
         <thead>
         <tr><th rowspan="2">engine</th><th colspan="3">fiddles created</th></tr>
         <tr><th>all time</th><th>90 day</th><th>7 day</th></tr>
@@ -80,7 +80,7 @@ export const handler = async (event) => {
           </tr>`, '')}
         </tbody>
       </table>${data.engines.reduce((p,engine,index) => /*html*/`${p}
-      <table data-engine="${engine.engine_code}" style="margin-top: 74px; margin-bottom: -58px;"${index === 0 ? '' : ' hidden'}>
+      <table data-engine="${engine.engine_code}"${index === 0 ? '' : ' hidden'}>
         <thead>
           <tr><th>version</th><th>all time</th><th>90 day</th><th>7 day</th></tr>
         </thead>
@@ -94,7 +94,7 @@ export const handler = async (event) => {
         </tbody>
       </table>`, '')}
     </div>
-    <details style="margin-top: 74px;">
+    <details>
       <summary>status <x-light></x-light>${data.alloweds.reduce((p,c) => c.is_down ? p : p = p+1, 0)} <x-light red></x-light>${data.alloweds.reduce((p,c) => c.is_down ? p = p+1 : p, 0)}</summary>
       <table>
         <thead>

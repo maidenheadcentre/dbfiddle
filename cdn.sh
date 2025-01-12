@@ -1,5 +1,6 @@
 #!/bin/bash
 
+components/codemirror/node_modules/.bin/rollup components/codemirror/build.js --format iife --name cm --file s3/codemirror.js --plugin @rollup/plugin-node-resolve
 components/light/node_modules/.bin/esbuild components/light/index.mjs --bundle --outfile=s3/light.js
 
 mkdir -p build

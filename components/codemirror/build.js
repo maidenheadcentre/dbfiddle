@@ -1,7 +1,7 @@
 import { EditorView } from "codemirror";
 import { EditorState, Compartment } from '@codemirror/state'
 import { keymap, highlightSpecialChars, drawSelection, highlightActiveLine, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter} from '@codemirror/view'
-import { standardKeymap, history, historyKeymap, toggleComment, indentWithTab } from "@codemirror/commands"
+import { standardKeymap, history, historyKeymap, indentLess, indentMore, toggleComment } from "@codemirror/commands"
 import { defaultHighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { lintKeymap } from '@codemirror/lint'
@@ -40,8 +40,9 @@ const editorFromTextArea = (textarea,engine) => {
       ...historyKeymap,
       ...foldKeymap,
       ...lintKeymap,
-      indentWithTab,
       { key: 'Mod-Enter', run: function(){ document.getElementById('run').click(); } },
+      { key: "Mod-[", run: indentLess },
+      { key: "Mod-]", run: indentMore },
       { key: "Mod-/", run: toggleComment },
       ]),
     EditorView.updateListener.of(update => {

@@ -223,8 +223,9 @@ export const handler = Sentry.wrapHandler(async event => {
     </header>
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
     </div>
-    <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
-      <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}
+    <footer>${data.engine_code==='sqlserver'?/*html*/`${data.adverts.reduce((p,c) => /*html*/`${p}
+      <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}` : /*html*/`
+      <script async type="text/javascript" src="//cdn.carbonads.com/carbon.js?serve=CW7I527L&placement=dbfiddleuk&format=cover" id="_carbonads_js"></script>`}
     </footer>
   </main>
   <footer>
@@ -239,7 +240,6 @@ return {
     headers: { 'Content-Type': 'text/html; charset=UTF-8'
              , 'Cache-Control': 'no-store'
              , 'X-Content-Type-Options': 'nosniff'
-             , 'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'"
              , 'Strict-Transport-Security': "max-age=31536000; includeSubDomains" },
     body: body,
   };

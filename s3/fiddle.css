@@ -9,6 +9,7 @@
 main>header { font-style: italic; font-size: smaller; background: #d9e3f7; padding: 0.2rem; margin-top: 0.2rem; }
 main>header>div+div { display: none; color: firebrick; margin-top: 0.4rem; }
 main>div { margin: 0.3rem; white-space: nowrap; }
+main>aside { margin: 1.85rem 0 0.3rem 1.85rem; }
 table tr:nth-child(even) { background-color: #f8f8f8; }
 table thead { background-color: #ddd; }
 td, th { border: 1px solid silver; padding: 0.2rem; font-weight: normal; }

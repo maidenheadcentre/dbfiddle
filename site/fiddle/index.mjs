@@ -117,7 +117,7 @@ export const handler = Sentry.wrapHandler(async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.2531dfe9.css" rel="stylesheet">
-  <link href="/static/fiddle.39a276c9.css" rel="stylesheet">
+  <link href="/static/fiddle.270ea80c.css" rel="stylesheet">
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">
   <script src="/static/codemirror.dad49f37.js" defer></script>
   <script src="/static/qp.ea500846.js" defer></script>
@@ -220,13 +220,13 @@ export const handler = Sentry.wrapHandler(async event => {
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${(data.engine_code==='postgres')?/*html*/`
       <div>Help with an interesting Postgres question: <a href="https://topanswers.xyz/databases?q=2316">Why isn't an Index Only Scan used on a partition accessed via the parent table?</a>.</div>`:''}
-    </header>
+    </header>${data.engine_code==='sqlserver' ? '' : /*html*/`
+    <aside><script async type="text/javascript" src="//cdn.carbonads.com/carbon.js?serve=CW7I527L&placement=dbfiddleuk&format=cover" id="_carbonads_js"></script></aside>` }
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
-    </div>
-    <footer>${data.engine_code==='sqlserver'?/*html*/`${data.adverts.reduce((p,c) => /*html*/`${p}
-      <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}` : /*html*/`
-      <script async type="text/javascript" src="//cdn.carbonads.com/carbon.js?serve=CW7I527L&placement=dbfiddleuk&format=cover" id="_carbonads_js"></script>`}
-    </footer>
+    </div>${data.engine_code==='sqlserver'?/*html*/`
+    <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
+      <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}
+    </footer>` : '' }
   </main>
   <footer>
     <div><a href="/">db<>fiddle</a> © 2017-${new Date().getFullYear()} Jack Douglas</div>

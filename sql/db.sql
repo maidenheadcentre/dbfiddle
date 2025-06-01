@@ -154,23 +154,3 @@ create table rotated(
 create or replace function gen_random_bytea(integer) returns bytea as $$
   select decode(string_agg(lpad(to_hex(width_bucket(random(), 0, 1, 256)-1),2,'0') ,''), 'hex') from generate_series(1, $1);
 $$ volatile language 'sql' set search_path = 'pg_catalog';
-
-
-
--- in cron database:
-select cron.schedule('fiddle daily stats', '0 2 * * *', $$
-update visit_daily d
-set visit_daily_count_distinct_source = (select count(distinct source_network)
-                                         from visit v
-                                         where v.engine_code=d.engine_code and v.version_code=d.version_code and v.sample_name=d.sample_name and v.visit_at>=d.visit_daily_on and v.visit_at<d.visit_daily_on+1)
-where visit_daily_count_distinct_source is null and visit_daily_on<current_date;$$);
-
-select cron.schedule('fiddle analyze', '0 2 * * *', $$analyze source;$$);
-
-update cron.job set database = 'fiddle' WHERE jobname like 'fiddle%';
-
-
-do $$
-begin
-  raise exception using message='foo', errcode='H0001', detail='bar';
-end$$;

@@ -1,5 +1,9 @@
+import postgres from 'postgres';
+const sql = postgres({ connection: { options: '-c search_path=robots' } });
 
 export const handler = async () => {
+
+  await sql`select sync()`;
 
   const body = `user-agent: *
 Allow: /$

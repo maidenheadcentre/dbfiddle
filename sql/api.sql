@@ -5,4 +5,5 @@ begin;
 \ir test.sql
 \ir down.sql
 \ir admin.sql
+\ir robots.sql
 commit;

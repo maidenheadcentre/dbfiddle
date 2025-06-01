@@ -4,7 +4,6 @@ export const handler = async (event) => {
   const response = await fetch('https://mcc-fiddle-cdn.s3.eu-west-2.amazonaws.com/'+event.pathParameters.filename);
   const base64body = Buffer.from(await response.arrayBuffer()).toString('base64');
 
-
   return {
     statusCode: response.status,
     headers: { 'Content-Type': response.headers.get("Content-Type")

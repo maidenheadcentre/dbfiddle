@@ -60,7 +60,7 @@ Resources:
       Timeout: 5
       MemorySize: 512
       Policies: AWSLambdaVPCAccessExecutionRole
-      CodeUri: site/home/
+      CodeUri: site/home
       Handler: index.handler
       Events:
         ApiEvent:
@@ -75,7 +75,7 @@ Resources:
       Timeout: 30
       MemorySize: 512
       Policies: AWSLambdaVPCAccessExecutionRole
-      CodeUri: site/fiddle/
+      CodeUri: site/fiddle
       Handler: index.handler
       Events:
         ApiEvent:
@@ -104,7 +104,7 @@ Resources:
       Timeout: 60
       Policies: 
         - AWSLambdaVPCAccessExecutionRole
-      CodeUri: event/test/
+      CodeUri: event/test
       Handler: index.handler
       Events:
         CWSchedule:
@@ -119,13 +119,27 @@ Resources:
       Policies: 
         - AWSLambdaVPCAccessExecutionRole
         - AmazonSESFullAccess
-      CodeUri: event/down/
+      CodeUri: event/down
       Handler: index.handler
       Events:
         CWSchedule:
           Type: Schedule
           Properties:
             Schedule: !Ref Schedule
+
+  robotsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 5
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/robots
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /robots.txt
+            Method: GET
 
   staticFunction:
     Type: AWS::Serverless::Function
@@ -140,7 +154,7 @@ Resources:
           Properties:
             Path: /static/{filename}
             Method: GET
-            
+
 Outputs:
   fiddle:
     Description: "API Gateway endpoint URL for $default stage"

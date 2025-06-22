@@ -17,5 +17,5 @@ $$ language sql security definer set search_path=public,admin,pg_temp;
 revoke all on all functions in schema admin from public;
 
 --select admin.new_engine('timescaledb','TimescaleDB',$${"select installed_version from pg_available_extensions where name = 'timescaledb';"}$$,';','2.11','2.11');
---select admin.new_version('mysql','8.4','8.4');
+--select admin.new_version('postgres','18','18 beta 1');
 --update engine set engine_default_version_code='8.4' where engine_code='mysql';

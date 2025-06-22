@@ -220,8 +220,7 @@ export const handler = Sentry.wrapHandler(async event => {
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${(data.engine_code==='postgres')?/*html*/`
       <div>Help with an interesting Postgres question: <a href="https://topanswers.xyz/databases?q=2316">Why isn't an Index Only Scan used on a partition accessed via the parent table?</a>.</div>`:''}
-    </header>${data.engine_code==='sqlserver' ? '' : /*html*/`
-    <aside><script async type="text/javascript" src="//cdn.carbonads.com/carbon.js?serve=CW7I527L&placement=dbfiddleuk&format=cover" id="_carbonads_js"></script></aside>` }
+    </header>
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
     </div>${data.engine_code==='sqlserver'?/*html*/`
     <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
@@ -240,6 +239,7 @@ return {
     headers: { 'Content-Type': 'text/html; charset=UTF-8'
              , 'Cache-Control': 'no-store'
              , 'X-Content-Type-Options': 'nosniff'
+             , 'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'"
              , 'Strict-Transport-Security': "max-age=31536000; includeSubDomains" },
     body: body,
   };

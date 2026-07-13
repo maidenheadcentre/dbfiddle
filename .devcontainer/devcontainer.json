@@ -1,19 +1,17 @@
 {
   "build": { "dockerfile": "./Dockerfile" },
 
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint",
-        "Tobermory.es6-string-html"
-      ]
-    }
-  },
-  
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind,consistency=delegated"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind,consistency=delegated",
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,readonly"
   ],
 
-  "runArgs": ["--env-file",".devcontainer/.env"]
-  
+  "customizations": {
+    "zed": {
+      "extensions": ["sql", "dockerfile", "html"]
+    }
+  },
+
+  "appPort": ["3004:3004"],
+  "postCreateCommand": "git config --global user.name 'Jack Douglas' && git config --global user.email '440631+jackdouglas@users.noreply.github.com'"
 }

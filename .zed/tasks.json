@@ -1,0 +1,42 @@
+[
+  {
+    "label": "api",
+    "command": "$ZED_WORKTREE_ROOT/api.sh",
+    "reveal_target": "center",
+    "hide": "on_success"
+  },
+  {
+    "label": "cdn",
+    "command": "$ZED_WORKTREE_ROOT/cdn.sh",
+    "reveal_target": "center",
+    "hide": "on_success"
+  },
+  {
+    "label": "local",
+    "command": "$ZED_WORKTREE_ROOT/local.sh",
+    "reveal_target": "center",
+    "hide": "on_success"
+  },
+  {
+    "label": "staging",
+    "command": "$ZED_WORKTREE_ROOT/staging.sh",
+    "reveal_target": "center"
+  },
+  {
+    "label": "prod",
+    "command": "$ZED_WORKTREE_ROOT/prod.sh",
+    "reveal_target": "center"
+  },
+  {
+    "label": "db",
+    "command": "$ZED_WORKTREE_ROOT/db.sh",
+    "reveal_target": "center",
+    "hide": "always"
+  },
+  {
+    "label": "firewall",
+    "command": "$ZED_WORKTREE_ROOT/firewall.sh",
+    "reveal_target": "center",
+    "hide": "on_success"
+  }
+]

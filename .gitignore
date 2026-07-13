@@ -2,4 +2,5 @@ build
 .aws-sam
 .env
 .DS_Store
+.claude
 node_modules

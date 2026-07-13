@@ -16,6 +16,6 @@ for folder in site event components; do
 
 done
 
-./cdn.sh
+scripts/cdn.sh
 
 sam local start-api --parameter-overrides "Pass=$PGPASSWORD_LAMBDA DB=$DB_IP Sentry=$SENTRY_DSN Certificate=$AWS_CERTIFICATE Zone=$AWS_ZONE Log=$AWS_LOG Environment=Local" --container-host host.docker.internal --host 0.0.0.0 --port 3004

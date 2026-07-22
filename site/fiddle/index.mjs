@@ -106,13 +106,22 @@ export const handler = Sentry.wrapHandler(async event => {
       </div>`;
   }
 
+  const origin = `https://${event.requestContext.domainName}`;
+  const ogDescription = (typeof data?.fiddle_output?.[0] === 'string' && data.fiddle_output[0] !== '')
+    ? data.fiddle_output[0].slice(0, 400).trim().replaceAll('"','&quot;')
+    : 'a free online environment to experiment with SQL and other code';
+
   const body = /*html*/`<!DOCTYPE html>
 <html>
 <head>
   <title>${data.engine_name} ${data.version_name} | db<>fiddle</title>
   <meta name="description" content="a free online environment to experiment with SQL and other code">
+  <meta property="og:site_name" content="db<>fiddle">
   <meta property="og:title" content="${data.engine_name} ${data.version_name}">
-  <meta property="og:description" content="${data?.fiddle_output?.[0]?.replaceAll?.('"','&quot;')}">
+  <meta property="og:description" content="${ogDescription}">
+  <meta property="og:url" content="${origin}/${event.pathParameters.code}">
+  <meta property="og:image" content="${origin}/static/logo.3ccc0c3c.png">
+  <meta name="theme-color" content="#2a5fcd">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">

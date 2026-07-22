@@ -35,6 +35,11 @@ export const handler = async (event) => {
 <head>
   <title>db<>fiddle</title>
   <meta name="description" content="a free online environment to experiment with SQL and Node.js">
+  <meta property="og:title" content="db<>fiddle">
+  <meta property="og:description" content="a free online environment to experiment with SQL and Node.js">
+  <meta property="og:url" content="https://${event.requestContext.domainName}/">
+  <meta property="og:image" content="https://${event.requestContext.domainName}/static/logo.3ccc0c3c.png">
+  <meta name="theme-color" content="#2a5fcd">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">

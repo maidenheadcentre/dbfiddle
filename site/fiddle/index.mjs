@@ -39,7 +39,7 @@ export const handler = Sentry.wrapHandler(async event => {
   const [[data]] = await sql`select get(${code})`.values();
   if(!data) return { statusCode: 404, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: 'not found' };
   Sentry.setContext("data", data);
-  await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referrer},${code})`;
+  await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referer},${code})`;
 
   if((data.fiddle_output!==null) && (typeof(data.fiddle_output[0]) !== 'string')){
     data.fiddle_output.forEach( (item,index) => {

@@ -7,7 +7,7 @@ export const handler = async (event) => {
   return {
     statusCode: response.status,
     headers: { 'Content-Type': response.headers.get("Content-Type")
-             , 'Cache-Control': 'public, max-age: 31536000, immutable'
+             , 'Cache-Control': 'public, max-age=31536000, immutable'
              , 'Expires': new Date(Date.now()+31536000000).toUTCString()
              , 'X-Content-Type-Options': 'nosniff'
              , 'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none"

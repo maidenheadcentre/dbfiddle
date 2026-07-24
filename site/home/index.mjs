@@ -142,7 +142,7 @@ export const handler = async (event) => {
              , 'Cache-Control': 'no-store'
              , 'X-Content-Type-Options': 'nosniff'
              , 'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src-attr 'unsafe-inline'"
-             , 'Strict-Transport-Security': "max-age=31536000; includeSubDomains" },
+             , 'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload" },
     body: body,
   };
 

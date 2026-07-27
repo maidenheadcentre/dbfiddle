@@ -38,7 +38,7 @@ li { margin-top : 0.5rem; }
 .icon:hover { opacity: 1; cursor: pointer; }
 .icon svg { height: 1rem; width: 100%; }
 
-main>footer { display: flex; justify-content: space-evenly; flex-wrap: wrap; gap: 1rem; padding: 1rem; }
+main>footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem clamp(1rem, 20% - 6rem, 10rem); padding: 1rem; }
 main>footer>a { position: relative; max-width: 30rem; width: fit-content; height: 18rem; border: 1px solid #d9e3f7; display: flex; flex-direction: column; justify-content: center; align-items: center; text-decoration: none; color: black; }
 main>footer>a.words { width: 10rem; }
 main>footer>a.words>img { margin: 2rem; }

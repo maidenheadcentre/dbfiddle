@@ -126,7 +126,7 @@ export const handler = Sentry.wrapHandler(async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.2531dfe9.css" rel="stylesheet">
-  <link href="/static/fiddle.270ea80c.css" rel="stylesheet">
+  <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">
   <script src="/static/codemirror.c33d15ed.js" defer></script>
   <script src="/static/qp.ea500846.js" defer></script>

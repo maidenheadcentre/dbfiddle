@@ -230,14 +230,14 @@ export const handler = Sentry.wrapHandler(async event => {
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>
     </header>
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
-    </div>${data.engine_code==='sqlserver'?/*html*/`
+    </div>${data.adverts.length?/*html*/`
     <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
       <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}
     </footer>` : '' }
   </main>
   <footer>
     <div><a href="/">db<>fiddle</a> © 2017-${new Date().getFullYear()} Jack Douglas</div>
-    <div><a href="https://twitter.com/dbfiddleuk">twitter</a></div>
+    <div><a href="https://x.com/dbfiddleuk">X</a></div>
   </footer>
 </body>
 </html>`

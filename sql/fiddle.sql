@@ -33,14 +33,17 @@ create function get(bytea) returns jsonb as $$
                                     from version v
                                     where v.engine_code = e.engine_code) z) versions
                         from engine e) z) engines
-               , (select coalesce(json_agg(to_jsonb(z)-'id'-'is_priority' order by is_priority desc, random()),'[]'::json)
-                  from (select distinct on (r.id,r.is_priority)
-                               r.id,r.is_priority,a.words,a.image,a.url,a.alt,a.tagline
-                        from rota r join rotated d on d.rota_id=r.id join advert a on a.id=d.advert_id
-                        where (r.engine_code is null or r.engine_code=e.engine_code) and
-                              (d.until is null or d.until>current_timestamp) and 
-                              (a.until is null or a.until>current_timestamp)
-                        order by r.id,r.is_priority,random() ) z) adverts
+               , (select coalesce(json_agg(to_jsonb(z)-'is_priority' order by is_priority desc, random()),'[]'::json)
+                  from (select r.is_priority,a.words,a.image,a.url,a.alt,a.tagline
+                        from rota r
+                        cross join lateral (select words,image,url,alt,tagline
+                                            from rotated d join advert a on a.id=d.advert_id
+                                            where d.rota_id=r.id and
+                                                  (d.until is null or d.until>current_timestamp) and
+                                                  (a.until is null or a.until>current_timestamp)
+                                            order by random()
+                                            limit r.rota_count) a
+                        where r.engine_code is null or r.engine_code=e.engine_code) z) adverts
            from fiddle f natural join engine e natural join version v
            where fiddle_code=$1 ) z));
 $$ language sql security definer set search_path=fiddle,public,pg_temp;

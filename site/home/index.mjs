@@ -131,7 +131,7 @@ export const handler = async (event) => {
   </main>
   <footer>
   <div>db<>fiddle © 2017-${new Date().getFullYear()} Jack Douglas</div>
-  <div><a href="https://twitter.com/dbfiddleuk">twitter</a></div>
+  <div><a href="https://x.com/dbfiddleuk">X</a></div>
   </footer>
 </body>
 </html>`

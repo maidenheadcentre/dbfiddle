@@ -142,6 +142,7 @@ create table rota(
 , name text not null
 , engine_code text references engine
 , is_priority boolean default false not null
+, rota_count integer default 1 not null
 );
 
 create table rotated(

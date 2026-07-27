@@ -14,6 +14,9 @@ body>header>:first-child>:first-child:visited, body>footer>:first-child>:first-c
 
 body>footer { top: 100vh; }
 body>footer>:first-child { font-family: monospace; }
+body>footer>div+div>a { display: flex; }
+body>footer>div+div>a>img { height: 1rem; }
+body>footer>div+div>a:last-child>img { height: 0.9rem; }
 
 dialog { margin: auto; }
 

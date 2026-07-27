@@ -125,7 +125,7 @@ export const handler = Sentry.wrapHandler(async event => {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
-  <link href="/static/global.2531dfe9.css" rel="stylesheet">
+  <link href="/static/global.aeef4bd8.css" rel="stylesheet">
   <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">
   <script src="/static/codemirror.c33d15ed.js" defer></script>
@@ -237,7 +237,7 @@ export const handler = Sentry.wrapHandler(async event => {
   </main>
   <footer>
     <div><a href="/">db<>fiddle</a> © 2017-${new Date().getFullYear()} Jack Douglas</div>
-    <div><a href="https://x.com/dbfiddleuk">X</a></div>
+    <div><a href="https://github.com/maidenheadcentre/dbfiddle"><img src="/static/github.138da068.svg" alt="GitHub"></a><a href="https://x.com/dbfiddleuk"><img src="/static/x.284fbff5.svg" alt="X"></a></div>
   </footer>
 </body>
 </html>`

@@ -221,14 +221,13 @@ export const handler = Sentry.wrapHandler(async event => {
     </div>
     <div>
       <a href='https://github.com/sponsors/jackdouglas'>donate</a>
-      <a href='https://topanswers.xyz/fiddle?q=2035'>feedback</a>
-      <a href='https://topanswers.xyz/fiddle?q=2036'>about</a>
+      <a href='https://github.com/maidenheadcentre/dbfiddle/issues'>feedback</a>
+      <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
     </div>
   </header>
   <main>
     <header>
-      <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${(data.engine_code==='postgres')?/*html*/`
-      <div>Help with an interesting Postgres question: <a href="https://topanswers.xyz/databases?q=2316">Why isn't an Index Only Scan used on a partition accessed via the parent table?</a>.</div>`:''}
+      <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>
     </header>
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
     </div>${data.engine_code==='sqlserver'?/*html*/`

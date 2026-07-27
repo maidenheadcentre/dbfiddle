@@ -55,8 +55,8 @@ export const handler = async (event) => {
     </div>
     <div>
       <a href='https://github.com/sponsors/jackdouglas'>donate</a>
-      <a href='https://topanswers.xyz/fiddle?q=2035'>feedback</a>
-      <a href='https://topanswers.xyz/fiddle?q=2036'>about</a>
+      <a href='https://github.com/maidenheadcentre/dbfiddle/issues'>feedback</a>
+      <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
     </div>
   </header>
   <main>
@@ -124,7 +124,7 @@ export const handler = async (event) => {
       <ul>
         <li>we only <b>log the first 3 octets of your IP</b> (so the total number of IPs above is an estimate)</li>
         <li>we <b>do not track users in any other way</b>: no cookies, tracking scripts, fingerprinting, etc, etc</li>
-        <li><a href="https://topanswers.xyz/fiddle?q=2108">adverts</a> are hosted so the <b>advertiser only knows you exist if you click</b></li>
+        <li>adverts are hosted so the <b>advertiser only knows you exist if you click</b></li>
         <li>although covered by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>, <b>fiddles are not enumerable</b>, so if you don't publish a link they aren't visible to anyone else</li>
       </ul>
     </details>

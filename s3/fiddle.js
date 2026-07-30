@@ -44,6 +44,12 @@
 
   runButton.addEventListener('click', async e => {
 
+    if (runButton.dataset.replacement) {
+      const versionSelect = document.querySelector('.version:not(.hidden)');
+      versionSelect.value = runButton.dataset.replacement;
+      versionSelect.dispatchEvent(new Event('change'));
+    }
+
     const remove = [];
     editors.forEach((e,i) => { if(e.state.doc.toString()==='') remove.push(document.querySelectorAll('.line')[i].querySelector('.icon.remove')) });
     remove.forEach(e => e.click());
@@ -192,6 +198,8 @@
     v.addEventListener("change", event => {
       for (const s of document.querySelectorAll('.sample:not(.hidden)')) s.classList.add('hidden');
       for (const s of document.querySelectorAll(`.sample[data-engine="${v.dataset.engine}"][data-version="${event.target.value}"]`)) s.classList.remove('hidden');
+      delete runButton.dataset.replacement;
+      runButton.querySelector('span').textContent = 'run';
       runButton.disabled = false;
     });
   }

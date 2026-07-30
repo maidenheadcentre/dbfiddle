@@ -130,7 +130,7 @@ export const handler = Sentry.wrapHandler(async event => {
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">
   <script src="/static/codemirror.c33d15ed.js" defer></script>
   <script src="/static/qp.ea500846.js" defer></script>
-  <script src="/static/fiddle.10b8d2b1.js" defer></script>
+  <script src="/static/fiddle.7e007e40.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -215,7 +215,7 @@ export const handler = Sentry.wrapHandler(async event => {
       <select class="sample${(e.engine_code!==data.engine_code)||(v.version_code!==data.version_code)?' hidden':''}${(v.samples.length<=1)?' empty':''}" data-engine="${e.engine_code}" data-version="${v.version_code}">${v.samples.reduce((p,c) => /*html*/`${p}
         <option value="${c.sample_name}"${c.sample_name===data.sample_name?' selected':''}>${c.sample_description}</option>`, '')}
       </select>`, '')}`, '')}
-      <button id="run" accesskey="r"${data.version_is_active?'':' disabled'}><span>run</span><svg class="spinner"><use href="#spinner"></use></svg></button>
+      <button id="run" accesskey="r"${data.version_is_active||data.replacement?'':' disabled'}${data.replacement?` data-replacement="${data.replacement.code}"`:''}><span>run${data.replacement?` with ${data.replacement.name}`:''}</span><svg class="spinner"><use href="#spinner"></use></svg></button>
       <button id="abort" accesskey="r"><span>abort</span></button>
       <button id="markdown" accesskey="m">markdown</button>
     </div>

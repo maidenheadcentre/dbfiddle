@@ -14,6 +14,12 @@ create function get(bytea) returns jsonb as $$
                , fiddle_input
                , fiddle_output_json fiddle_output
                , version_is_active
+               , ( select json_build_object('code', dv.version_code, 'name', dv.version_name)
+                 from version dv natural join allowed a
+                   where not v.version_is_active
+                     and dv.engine_code = e.engine_code
+                     and dv.version_code = e.engine_default_version_code
+                     and a.sample_name = f.sample_name ) replacement
                , (select json_agg(z order by engine_name)
                   from (select engine_code
                              , engine_name

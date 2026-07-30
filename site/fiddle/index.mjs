@@ -100,7 +100,8 @@ export const handler = Sentry.wrapHandler(async event => {
       data.fiddle_output[index] = markdown;
     });
   }
- 
+
+  const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
   const highlight = (+event.queryStringParameters?.highlight ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
   const batch = (input = '', output = '', index = null) => {
@@ -145,10 +146,10 @@ export const handler = Sentry.wrapHandler(async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">
-  <link href="/static/qp.8db7ca63.css" rel="stylesheet">
-  <script src="/static/codemirror.5d5a4591.js" defer></script>
-  <script src="/static/qp.ea500846.js" defer></script>
+  <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
+  <script src="/static/codemirror.5d5a4591.js" defer></script>${showplan ? /*html*/`
+  <script src="/static/qp.ea500846.js" defer></script>` : ''}
   <script src="/static/fiddle.7e007e40.js" defer></script>
   <template>${batch()}
   </template>

@@ -141,19 +141,30 @@ Resources:
             Path: /robots.txt
             Method: GET
 
-  staticFunction:
-    Type: AWS::Serverless::Function
+  staticIntegration:
+    Type: AWS::ApiGatewayV2::Integration
     Properties:
-      Timeout: 5
-      Policies: AWSLambdaVPCAccessExecutionRole
-      CodeUri: site/static
-      Handler: index.handler
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /static/{filename}
-            Method: GET
+      ApiId: !Ref ServerlessHttpApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: GET
+      IntegrationUri: https://mcc-fiddle-cdn.s3.eu-west-2.amazonaws.com/{filename}
+      PayloadFormatVersion: '1.0'
+      ResponseParameters:
+        '200':
+          ResponseParameters:
+            - Destination: 'overwrite:header.X-Content-Type-Options'
+              Source: 'nosniff'
+            - Destination: 'overwrite:header.Content-Security-Policy'
+              Source: "base-uri 'none'; frame-ancestors 'none'; default-src none"
+            - Destination: 'overwrite:header.Strict-Transport-Security'
+              Source: 'max-age=31536000; includeSubDomains; preload'
+
+  staticRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ServerlessHttpApi
+      RouteKey: 'GET /static/{filename}'
+      Target: !Sub 'integrations/${staticIntegration}'
 
 Outputs:
   fiddle:

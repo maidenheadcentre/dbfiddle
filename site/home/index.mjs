@@ -65,7 +65,7 @@ export const handler = async (event) => {
   <link href="static/global.aeef4bd8.css" rel="stylesheet">
   <link href="static/home.7fc5e28d.css" rel="stylesheet">
   <script src="/static/home.2ce1b277.js" defer></script>
-  <script type="module" src="static/light.6d47cbec.js"></script>
+  <script type="module" src="static/light.c8c6970e.js"></script>
 </head>
 <body>
   <header>

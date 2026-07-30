@@ -2,7 +2,8 @@
 set -euo pipefail
 
 components/codemirror/node_modules/.bin/rollup components/codemirror/build.js --format iife --name cm --file s3/codemirror.js --plugin @rollup/plugin-node-resolve
-components/light/node_modules/.bin/esbuild components/light/index.mjs --bundle --outfile=s3/light.js
+components/light/node_modules/.bin/esbuild s3/codemirror.js --minify --allow-overwrite --outfile=s3/codemirror.js
+components/light/node_modules/.bin/esbuild components/light/index.mjs --bundle --minify --outfile=s3/light.js
 
 mkdir -p build
 rm -rf build/*
@@ -20,7 +21,7 @@ done
 
 cd ../build
 
-aws s3 sync --size-only --cache-control="max-age=31536000" . s3://mcc-fiddle-cdn
+aws s3 sync --size-only --cache-control="public, max-age=31536000, immutable" . s3://mcc-fiddle-cdn
 
 cd ..
 rm -rf build

@@ -147,7 +147,7 @@ export const handler = Sentry.wrapHandler(async event => {
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
   <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">
-  <script src="/static/codemirror.c33d15ed.js" defer></script>
+  <script src="/static/codemirror.5d5a4591.js" defer></script>
   <script src="/static/qp.ea500846.js" defer></script>
   <script src="/static/fiddle.7e007e40.js" defer></script>
   <template>${batch()}

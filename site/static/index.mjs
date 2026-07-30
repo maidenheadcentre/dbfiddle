@@ -6,12 +6,14 @@ export const handler = async (event) => {
 
   return {
     statusCode: response.status,
-    headers: { 'Content-Type': response.headers.get("Content-Type")
-             , 'Cache-Control': 'public, max-age=31536000, immutable'
-             , 'Expires': new Date(Date.now()+31536000000).toUTCString()
-             , 'X-Content-Type-Options': 'nosniff'
-             , 'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none"
-             , 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload' },
+    headers: {
+      'Content-Type': response.headers.get("Content-Type"),
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Expires': new Date(Date.now()+31536000000).toUTCString(),
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none",
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    },
     body: base64body,
     isBase64Encoded: true,
   };

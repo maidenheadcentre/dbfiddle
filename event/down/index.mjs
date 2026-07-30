@@ -24,7 +24,7 @@ export const handler = Sentry.wrapHandler(async (event,context) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(JSON.stringify(data.engine_default)) },
       body: JSON.stringify(data.engine_default),
-      signal: controller.signal
+      signal: controller.signal,
     }).catch(e=>{});
     clearTimeout(id);
 
@@ -37,7 +37,7 @@ export const handler = Sentry.wrapHandler(async (event,context) => {
         return ses.send(new SendEmailCommand({
           Destination: { ToAddresses: [process.env.ADMINEMAIL] },
           Message: { Body: { Text: { Charset: "UTF-8", Data: JSON.stringify(data,null,2) } }, Subject: { Charset: 'UTF-8', Data: `${data.engine_code} ${data.version_code} is down with ${response?.status ?? 'timeout'}` } },
-          Source: 'noreply@dbfiddle.uk'
+          Source: 'noreply@dbfiddle.uk',
         }));
       }
     } else {
@@ -45,7 +45,7 @@ export const handler = Sentry.wrapHandler(async (event,context) => {
         return ses.send(new SendEmailCommand({
           Destination: { ToAddresses: [process.env.ADMINEMAIL] },
           Message: { Body: { Text: { Charset: "UTF-8", Data: JSON.stringify(data,null,2) } }, Subject: { Charset: 'UTF-8', Data: `${data.engine_code} ${data.version_code} is up after ${interval}` } },
-          Source: 'noreply@dbfiddle.uk'
+          Source: 'noreply@dbfiddle.uk',
         }));
       }
     }

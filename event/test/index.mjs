@@ -20,7 +20,7 @@ export const handler = Sentry.wrapHandler(async event => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(JSON.stringify(data.engine_default)) },
       body: JSON.stringify(data.engine_default),
-      signal: controller.signal
+      signal: controller.signal,
     }).catch(e=>{});
     clearTimeout(id);
 

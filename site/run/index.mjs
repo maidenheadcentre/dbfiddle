@@ -12,7 +12,8 @@ export const handler = async (event) => {
     const [[data]] = await sql`select save(${qp.engine},${qp.version},${qp?.sample ?? ''},array(select jsonb_array_elements_text(${event.body}::text::jsonb)),array(select jsonb_array_elements(${result})))`.values();
     return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: data.toString('base64url') };
   } catch(e) {
-    if( (e.name==='PostgresError') && (e.code.slice(0,2)==='H0') ) return { statusCode: +e.code.slice(2), body: `{ "message": "${e.detail}" }` };
-    return { statusCode: 500, body: `{ message": "run failed" }` };
+    const headers = { 'Content-Type': 'application/json; charset=UTF-8' };
+    if( (e.name==='PostgresError') && (e.code.slice(0,2)==='H0') ) return { statusCode: +e.code.slice(2), headers, body: JSON.stringify({ message: e.detail }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ message: 'run failed' }) };
   }
 };

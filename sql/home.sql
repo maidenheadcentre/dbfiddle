@@ -74,7 +74,7 @@ create function get() returns jsonb as $$
             ) z
         ) engines
       , ( select json_agg(z order by name)
-          from ( select engine_name || ' ' || version_name || case when sample_name<>'' then ' ('||sample_name||')' else '' end name, allowed_fail_since is not null is_down from engine natural join version natural join allowed ) z
+          from ( select engine_name || ' ' || version_name || case when sample_name<>'' then ' ('||sample_name||')' else '' end name, allowed_fail_since is not null is_down from engine natural join version natural join allowed where version_is_active ) z
         ) alloweds
       from pg_class
       where oid = 'public.source'::regclass 

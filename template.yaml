@@ -23,7 +23,7 @@ Globals:
   HttpApi:
     AccessLogSettings:
       DestinationArn: !Sub '${Log}${Environment}'
-      Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "error.message":"$context.error.message", "integration.error":"$context.integration.error" }'
+      Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "ua":"$context.identity.userAgent", "error.message":"$context.error.message", "integration.error":"$context.integration.error" }'
     Domain:
       DomainName: !Sub '${Domain}'
       CertificateArn: !Ref Certificate
@@ -51,6 +51,33 @@ Globals:
 
 Resources:
 
+  # declared explicitly so the static route lives inside the definition SAM
+  # regenerates, rather than as separate resources it silently replaces
+  httpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: !Ref AWS::StackName
+          version: '1.0'
+        paths:
+          /static/{filename}:
+            get:
+              description: content-hashed assets, proxied straight from s3
+              responses: {}
+              x-amazon-apigateway-integration:
+                type: http_proxy
+                httpMethod: GET
+                uri: https://mcc-fiddle-cdn.s3.eu-west-2.amazonaws.com/{filename}
+                payloadFormatVersion: '1.0'
+                connectionType: INTERNET
+                responseParameters:
+                  '200':
+                    'overwrite:header.X-Content-Type-Options': 'nosniff'
+                    'overwrite:header.Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none"
+                    'overwrite:header.Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload'
+
   sharedLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -72,6 +99,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
+            ApiId: !Ref httpApi
             Path: /
             Method: GET
 
@@ -89,6 +117,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
+            ApiId: !Ref httpApi
             Path: /{code}
             Method: GET
 
@@ -105,6 +134,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
+            ApiId: !Ref httpApi
             Path: /run
             Method: POST
 
@@ -154,6 +184,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
+            ApiId: !Ref httpApi
             Path: /llms.txt
             Method: GET
 
@@ -170,35 +201,11 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
+            ApiId: !Ref httpApi
             Path: /robots.txt
             Method: GET
-
-  staticIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref ServerlessHttpApi
-      IntegrationType: HTTP_PROXY
-      IntegrationMethod: GET
-      IntegrationUri: https://mcc-fiddle-cdn.s3.eu-west-2.amazonaws.com/{filename}
-      PayloadFormatVersion: '1.0'
-      ResponseParameters:
-        '200':
-          ResponseParameters:
-            - Destination: 'overwrite:header.X-Content-Type-Options'
-              Source: 'nosniff'
-            - Destination: 'overwrite:header.Content-Security-Policy'
-              Source: "base-uri 'none'; frame-ancestors 'none'; default-src none"
-            - Destination: 'overwrite:header.Strict-Transport-Security'
-              Source: 'max-age=31536000; includeSubDomains; preload'
-
-  staticRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ServerlessHttpApi
-      RouteKey: 'GET /static/{filename}'
-      Target: !Sub 'integrations/${staticIntegration}'
 
 Outputs:
   fiddle:
     Description: "API Gateway endpoint URL for $default stage"
-    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Value: !Sub "https://${httpApi}.execute-api.${AWS::Region}.amazonaws.com"

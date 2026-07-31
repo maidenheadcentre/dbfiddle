@@ -139,7 +139,7 @@ export const handler = async event => {
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
   <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
-  <script src="/static/codemirror.5d5a4591.js" defer></script>${showplan ? /*html*/`
+  <script src="/static/codemirror.de15ae2f.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
   <script src="/static/fiddle.7e007e40.js" defer></script>
   <template>${batch()}

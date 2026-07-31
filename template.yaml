@@ -64,7 +64,6 @@ Resources:
         paths:
           /static/{filename}:
             get:
-              description: content-hashed assets, proxied straight from s3
               responses: {}
               x-amazon-apigateway-integration:
                 type: http_proxy

@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import { postgres } from '/opt/shared.mjs';
 const sql = postgres({ connection: { options: '-c search_path=robots' } });
 
 export const handler = async () => {

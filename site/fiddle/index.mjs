@@ -1,34 +1,11 @@
-import * as Sentry from "@sentry/aws-serverless";
-import postgres from 'postgres';
+import { postgres, compressed } from '/opt/shared.mjs';
 import markdownit from 'markdown-it';
 import markdownitbr from 'markdown-it-br';
-import zlib from 'node:zlib';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
-Sentry.init({ dsn: process.env.SENTRY, tracesSampleRate: 0.01 });
 
-// brotli q5 and gzip both cost ~0.1ms on a typical page; q11 is 200x slower for 1% more
-const compressed = (body, headers, accept = '') => {
-  const offered = (accept ?? '').split(',')
-    .map(t => t.trim().split(';'))
-    .filter(([,...params]) => !params.some(p => /^\s*q=0(\.0*)?\s*$/.test(p)))
-    .map(([name]) => name.toLowerCase());
-  const encoding = offered.includes('br') ? 'br' : offered.includes('gzip') ? 'gzip' : null;
-  if(!encoding) return { headers, body };
-  const buffer = (encoding === 'br')
-    ? zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
-    : zlib.gzipSync(body);
-  return {
-    headers: { ...headers, 'Content-Encoding': encoding, 'Vary': 'Accept-Encoding' },
-    body: buffer.toString('base64'),
-    isBase64Encoded: true,
-  };
-};
+export const handler = async event => {
 
-export const handler = Sentry.wrapHandler(async event => {
-
-  Sentry.setContext("event", event);
-  Sentry.setContext("http", event.requestContext);
   const md = markdownit().use(markdownitbr);
 
   function backtickCount (s = '') {
@@ -57,7 +34,6 @@ export const handler = Sentry.wrapHandler(async event => {
   const code = Buffer.from(event.pathParameters.code,'base64url');
   const [[data]] = await sql`select get(${code})`.values();
   if(!data) return { statusCode: 404, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: 'not found' };
-  Sentry.setContext("data", data);
   await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referer},${code})`;
 
   if((data.fiddle_output!==null) && (typeof(data.fiddle_output[0]) !== 'string')){
@@ -272,4 +248,4 @@ export const handler = Sentry.wrapHandler(async event => {
 
   return { statusCode: 200, ...compressed(body, headers, event.headers?.['accept-encoding']) };
 
-});
+};

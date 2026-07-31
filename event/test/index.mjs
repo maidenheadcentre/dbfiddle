@@ -1,16 +1,11 @@
-import * as Sentry from "@sentry/aws-serverless";
-import postgres from 'postgres';
+import { postgres } from '/opt/shared.mjs';
 
 const sql = postgres({ connection: { options: '-c search_path=test' } });
-Sentry.init({ dsn: process.env.SENTRY, tracesSampleRate: 0.01 });
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-export const handler = Sentry.wrapHandler(async event => {
+export const handler = async event => {
 
-  Sentry.setContext("event", event);
-  Sentry.setContext("http", event.requestContext);
   const [[data]] = await sql`select get()`.values();
-  Sentry.setContext("data", data);
 
   if(data!==null){
 
@@ -31,4 +26,4 @@ export const handler = Sentry.wrapHandler(async event => {
 
   }
 
-});
+};

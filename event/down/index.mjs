@@ -1,22 +1,17 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import * as Sentry from "@sentry/aws-serverless";
-import postgres from 'postgres';
+import { postgres } from '/opt/shared.mjs';
 
 const sql = postgres({ connection: { options: '-c search_path=down' } });
-Sentry.init({ dsn: process.env.SENTRY, tracesSampleRate: 0.01 });
 const ses = new SESClient({ region: "eu-west-2" });
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-export const handler = Sentry.wrapHandler(async (event,context) => {
+export const handler = async (event,context) => {
 
-  Sentry.setContext("event", event);
-  Sentry.setContext("http", event.requestContext);
   const [[data]] = await sql`select get()`.values();
 
   if(data!==null){
 
     data.functionName = context?.functionName;
-    Sentry.setContext("data", data);
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 30000);
@@ -50,4 +45,4 @@ export const handler = Sentry.wrapHandler(async (event,context) => {
       }
     }
   }
-});
+};

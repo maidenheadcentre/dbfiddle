@@ -1,6 +1,6 @@
 import { postgres, compressed } from '/opt/shared.mjs';
 import markdownit from 'markdown-it';
-import markdownitbr from 'markdown-it-br';
+import markdownitbr from './br.mjs';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
 

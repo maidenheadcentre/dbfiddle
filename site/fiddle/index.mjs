@@ -1,4 +1,4 @@
-import { postgres, compressed } from '/opt/shared.mjs';
+import { postgres, compressed, accepts } from '/opt/shared.mjs';
 import markdownit from 'markdown-it';
 import markdownitbr from './br.mjs';
 
@@ -104,7 +104,7 @@ export const handler = async event => {
 
   const origin = `https://${event.requestContext.domainName}`;
 
-  if( (event.headers?.accept ?? '').includes('text/markdown') ){
+  if( accepts(event.headers?.accept).includes('text/markdown') ){
     const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre('',c)}${data?.fiddle_output?.[i] ?? ''}`, '')
                    + `[fiddle](${origin}/${event.pathParameters.code})\n`;
     const headers = {

@@ -103,6 +103,20 @@ export const handler = async event => {
   }
 
   const origin = `https://${event.requestContext.domainName}`;
+
+  if( (event.headers?.accept ?? '').includes('text/markdown') ){
+    const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre('',c)}${data?.fiddle_output?.[i] ?? ''}`, '')
+                   + `[fiddle](${origin}/${event.pathParameters.code})\n`;
+    const headers = {
+      'Content-Type': 'text/markdown; charset=UTF-8',
+      'Cache-Control': 'no-store',
+      'Vary': 'Accept',
+      'X-Content-Type-Options': 'nosniff',
+      'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",
+    };
+    return { statusCode: 200, ...compressed(markdown, headers, event.headers?.['accept-encoding']) };
+  }
+
   const ogDescription = (typeof data?.fiddle_output?.[0] === 'string' && data.fiddle_output[0] !== '')
     ? data.fiddle_output[0].slice(0, 400).trim().replaceAll('"','&quot;')
     : 'a free online environment to experiment with SQL and other code';
@@ -241,6 +255,7 @@ export const handler = async event => {
   const headers = {
     'Content-Type': 'text/html; charset=UTF-8',
     'Cache-Control': 'no-store',
+    'Vary': 'Accept',
     'X-Content-Type-Options': 'nosniff',
     'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'",
     'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",

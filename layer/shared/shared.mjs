@@ -15,7 +15,7 @@ export const compressed = (body, headers, accept = '') => {
     ? zlib.brotliCompressSync(body, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
     : zlib.gzipSync(body);
   return {
-    headers: { ...headers, 'Content-Encoding': encoding, 'Vary': 'Accept-Encoding' },
+    headers: { ...headers, 'Content-Encoding': encoding, 'Vary': headers.Vary ? `${headers.Vary}, Accept-Encoding` : 'Accept-Encoding' },
     body: buffer.toString('base64'),
     isBase64Encoded: true,
   };

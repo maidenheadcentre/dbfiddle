@@ -5,8 +5,12 @@ export const handler = async () => {
 
   await sql`select sync()`;
 
-  const body = `user-agent: *
+  const body = `# fiddles are available as markdown — send Accept: text/markdown
+# machine-readable docs: https://dbfiddle.uk/llms.txt
+
+user-agent: *
 Allow: /$
+Allow: /llms.txt
 Disallow: /`;
 
   return {

@@ -6,4 +6,5 @@ begin;
 \ir down.sql
 \ir admin.sql
 \ir robots.sql
+\ir llms.sql
 commit;

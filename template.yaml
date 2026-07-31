@@ -54,7 +54,7 @@ Resources:
   sharedLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      ContentUri: layer/shared
+      ContentUri: /workspaces/dbfiddle/layer/shared
       CompatibleRuntimes:
         - nodejs22.x
 
@@ -140,6 +140,22 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: !Ref Schedule
+
+  llmsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 5
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/llms
+      Handler: index.handler
+      Layers:
+        - !Ref sharedLayer
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /llms.txt
+            Method: GET
 
   robotsFunction:
     Type: AWS::Serverless::Function

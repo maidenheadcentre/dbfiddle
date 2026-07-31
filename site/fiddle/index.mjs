@@ -111,6 +111,7 @@ export const handler = async event => {
       'Content-Type': 'text/markdown; charset=UTF-8',
       'Cache-Control': 'no-store',
       'Vary': 'Accept',
+      'X-Robots-Tag': 'noindex',
       'X-Content-Type-Options': 'nosniff',
       'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",
     };
@@ -256,6 +257,7 @@ export const handler = async event => {
     'Content-Type': 'text/html; charset=UTF-8',
     'Cache-Control': 'no-store',
     'Vary': 'Accept',
+    'X-Robots-Tag': 'noindex',
     'X-Content-Type-Options': 'nosniff',
     'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'",
     'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",

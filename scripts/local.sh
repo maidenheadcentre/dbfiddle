@@ -27,6 +27,6 @@ for folder in site event components; do
 
 done
 
-scripts/cdn.sh
+scripts/cdn.sh || exit
 
-sam local start-api --skip-pull-image --parameter-overrides "Pass=$PGPASSWORD_LAMBDA DB=$DB_IP Certificate=$AWS_CERTIFICATE Zone=$AWS_ZONE Log=$AWS_LOG Environment=Local" --container-host host.docker.internal --host 0.0.0.0 --port 3004
+sam local start-api --skip-pull-image --parameter-overrides "Pass=$PGPASSWORD_LAMBDA DB=$DB_IP Certificate=$AWS_CERTIFICATE Zone=$AWS_ZONE Log=$AWS_LOG Environment=Local" --container-host host.docker.internal --host 0.0.0.0 --port 3004 --static-dir "$PWD/build"

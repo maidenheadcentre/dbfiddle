@@ -79,10 +79,9 @@ export const handler = async event => {
 
   const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
-  const highlight = (+event.queryStringParameters?.highlight ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
   const batch = (input = '', output = '', index = null) => {
     return /*html*/`
-      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}${(index !== null && highlight[index]) ? ' highlight' : ''}">
+      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}">
         <div class="icon plus" title="add batch"><svg><use href="#plus"></use></svg></div>
         <div class="batch">
           <div class="controls">
@@ -90,7 +89,6 @@ export const handler = async event => {
             <div class="icon remove hidden" title="remove batch"><svg><use href="#remove"></use></svg></div>
             <div class="icon split hidden" title="split batch"><svg><use href="#split"></use></svg></div>
             <div class="icon hide hidden" title="hide batch"><svg><use href="#hide"></use></svg></div>
-            <div class="icon highlight hidden" title="toggle highlight for batch"><svg><use href="#highlight"></use></svg></div>
           </div>
           <div class="io">
             <div class="input" data-markdown="${backtickWrapPre('',input.replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
@@ -137,11 +135,11 @@ export const handler = async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.9d335ba2.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/fiddle.a7f9ef15.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.de15ae2f.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.7e007e40.js" defer></script>
+  <script src="/static/fiddle.e11d1184.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -195,12 +193,6 @@ export const handler = async event => {
         <circle cx="8" cy="8" r="1.5" stroke="black" fill-opacity="0"/>
         <line x1="13" y1="3" x2="3" y2="13" stroke-width="2" stroke="white"/>
         <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="black"/>
-      </symbol>
-      <symbol id="highlight" viewBox="0 0 16 16">
-        <title>highlight batch</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <path d="M 8 4 L 5 7 L 10 12 L 13 9" stroke="black" stroke-width="1.5" fill-opacity="0" stroke-linejoin="round"/>
-        <path d="M 6 8 L 3 11 3 12 L 8 12 9 11 Z" stroke="black" stroke-width="1.5" fill-opacity="1" stroke-linejoin="round"/>
       </symbol>
       <symbol id="spinner" viewBox="-1 -1 12 12">
         <circle cx="0" cy="5" r="1"/>

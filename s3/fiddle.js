@@ -56,7 +56,6 @@
 
     const batches = [];
     const hide = parseInt(Array.from(document.querySelectorAll('.line')).reduce((p,c,i) => p + (c.classList.contains('hide')?'1':'0'), '' ),2);
-    const highlight = parseInt(Array.from(document.querySelectorAll('.line')).reduce((p,c,i) => p + (c.classList.contains('highlight')?'1':'0'), '' ),2);
     let hash = '';
 
     for (const [index, editor] of editors.entries()){
@@ -97,7 +96,6 @@
 
       const params = new URLSearchParams();
       if(hide) params.append('hide',hide);
-      if(highlight) params.append('highlight',highlight);
 
       history.pushState("", document.title, (await response.text()) + (params.toString() ? '?' + params.toString() : '') + hash);
       window.location.reload();
@@ -148,11 +146,6 @@
 
       if (icon.classList.contains("hide")) {
         line.classList.add('hide');
-        return;
-      }
-
-      if (icon.classList.contains("highlight")) {
-        line.classList.toggle('highlight');
         return;
       }
 

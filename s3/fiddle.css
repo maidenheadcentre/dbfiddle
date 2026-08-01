@@ -26,7 +26,6 @@ li { margin-top : 0.5rem; }
 .output>* { display: block; overflow-x: auto; }
 .output>*+* { margin-top: 0.5rem; }
 .output td { white-space: pre; }
-.line.highlight .batch>.controls { box-shadow: 30px 0 25px 0px #f8a100; }
 .line:not(.hide) .show { display: none; }
 .line.hide>:not(.show) { display: none; }
 .line:not(:last-child) .plus:last-child { display: none; }

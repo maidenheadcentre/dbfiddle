@@ -40,8 +40,7 @@ optional \`&sample={name}\`; the engine list below shows which versions offer on
 
 ## Linking a fiddle for a person to read
 
-    ?hide={n}       bitmask, most significant bit = first batch — collapses setup batches
-    ?highlight={n}  same shape — highlights batches
+    ?hide={n}  bitmask, most significant bit = first batch — collapses setup batches
 
 ## Engines and versions
 

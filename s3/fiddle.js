@@ -72,6 +72,7 @@
     runButton.classList.add('running');
 
     let aborted = false;
+    let failure = 'The run did not complete. Please try again later.';
 
     try {
 
@@ -89,10 +90,14 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(batches),
         signal: controller.signal,
-      }).then(response => {
-        if (response.status !== 200) throw new Error("Bad response");
-        return response;
       });
+
+      if (response.status !== 200) {
+        // only a dbfiddle-marked body is meant for a user; API Gateway's is not
+        const why = await response.json().catch(() => null);
+        if (why?.dbfiddle) failure = why.message;
+        throw new Error(failure);
+      }
 
       const params = new URLSearchParams();
       if(hide) params.append('hide',hide);
@@ -101,7 +106,7 @@
       window.location.reload();
 
     } catch (e) {
-      if(!aborted) alert('run failed');
+      if(!aborted) alert(failure);
     } finally {
       for (const editor of editors) editor.setEditable(true);
       runButton.disabled = false;

@@ -6,6 +6,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const broken = 'The engine failed to run — this is not a problem with your fiddle. Please try again later.';
 const messages = {
   400: 'That engine or version is not available.',
+  413: 'Fiddle produced too much output.',
   500: broken,
   502: broken,
   503: 'The engine is busy right now. Please try again in a moment.',

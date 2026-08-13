@@ -7,7 +7,7 @@ create user lambda password :'password_lambda';
 create table engine(
   engine_code text primary key
 , engine_name text not null unique
-, engine_default text[] not null
+, engine_test text not null
 , engine_default_version_code text not null
 , engine_separator_regex text not null default ';\s*$'
 );

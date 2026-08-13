@@ -5,7 +5,7 @@ set search_path to down;
 --
 create function get() returns jsonb as $$
   select to_jsonb(z)
-  from (select engine_code,version_code,sample_name,engine_default
+  from (select engine_code,version_code,sample_name,engine_test
              , allowed_last_test_at=allowed_fail_since is_new
              , to_char(allowed_fail_since,'HH24:MI') fail_time
              , to_char(current_timestamp,'HH24:MI') time_now

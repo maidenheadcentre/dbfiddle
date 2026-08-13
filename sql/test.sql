@@ -5,8 +5,8 @@ set search_path to test;
 --
 create function get() returns jsonb as $$
   select to_jsonb(z)
-  from (select engine_code,version_code,sample_name,engine_default
-        from (select engine_code,version_code,sample_name,engine_default
+  from (select engine_code,version_code,sample_name,engine_test
+        from (select engine_code,version_code,sample_name,engine_test
                    , extract(epoch from current_timestamp-greatest(allowed_last_test_at,max))*greatest(sum/28,1) weight
               from allowed a
                   natural join engine e

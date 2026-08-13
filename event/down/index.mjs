@@ -15,10 +15,11 @@ export const handler = async (event,context) => {
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 30000);
+    const batches = JSON.stringify([data.engine_test]);
     const response = await fetch(`https://run.dbfiddle.uk/?type=${data.engine_code}_${data.version_code}${data.sample_name==='' ? '' : `&sample=${data.sample_name}`}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(JSON.stringify(data.engine_default)) },
-      body: JSON.stringify(data.engine_default),
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(batches) },
+      body: batches,
       signal: controller.signal,
     }).catch(e=>{});
     clearTimeout(id);

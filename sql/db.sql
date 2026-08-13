@@ -111,13 +111,12 @@ create table visit(
   engine_code text
 , version_code text
 , sample_name text
-, fiddle_hash bytea
+, fiddle_code bytea not null references fiddle(fiddle_code)
 , source_network cidr not null references source
 , visit_at timestamptz default current_timestamp not null
 , visit_referer text
-, foreign key (engine_code,version_code,sample_name,fiddle_hash) references fiddle
 );
-create index visit_fiddle on visit(engine_code,version_code,sample_name,fiddle_hash);
+create index visit_fiddle_code on visit(fiddle_code);
 create index visit_cron on visit(engine_code,version_code,sample_name,visit_at);
 
 create table visit_daily(

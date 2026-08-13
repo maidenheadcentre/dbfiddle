@@ -97,16 +97,6 @@ create table source(
 , source_ignore_reason text
 );
 
-create table run(
-  engine_code text
-, version_code text
-, sample_name text
-, fiddle_hash bytea
-, source_network cidr not null references source
-, run_at timestamptz default current_timestamp not null
-, foreign key (engine_code,version_code,sample_name,fiddle_hash) references fiddle
-);
-
 create table visit(
   engine_code text
 , version_code text

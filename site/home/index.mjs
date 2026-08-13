@@ -78,7 +78,7 @@ export const handler = async (event) => {
         </tbody>
         <tbody>${data.engines.reduce((p,engine,index) => /*html*/`${p}
           <tr>
-            <td><a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}">${engine.name}</a></td>
+            <td>${engine.fiddle ? /*html*/`<a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}">${engine.name}</a>` : engine.name}</td>
             <td>${engine.total.toLocaleString()}</td>
             <td>${engine.total90.toLocaleString()}</td>
             <td>${engine.total7.toLocaleString()}</td>

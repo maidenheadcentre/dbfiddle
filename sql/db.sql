@@ -34,6 +34,7 @@ create table allowed(
 , sample_name text default '' references sample
 , allowed_last_test_at timestamptz default timestamptz '-infinity' not null
 , allowed_fail_since timestamptz
+, allowed_default_fiddle_code bytea
 , primary key (engine_code,version_code,sample_name)
 , foreign key (engine_code,version_code) references version(engine_code,version_code)
 );
@@ -71,10 +72,14 @@ create table fiddle(
 , fiddle_output_json jsonb[]
 , fiddle_is_actual boolean default true not null
 , primary key (engine_code,version_code,sample_name,fiddle_hash)
+, unique (engine_code,version_code,sample_name,fiddle_code)
 , foreign key (engine_code,version_code,sample_name) references allowed(engine_code,version_code,sample_name)
 , check(cardinality(fiddle_input)=cardinality(fiddle_output))
 );
 create index fiddle_latest on fiddle(engine_code,version_code,sample_name,fiddle_at);
+
+alter table allowed add foreign key (engine_code,version_code,sample_name,allowed_default_fiddle_code)
+  references fiddle(engine_code,version_code,sample_name,fiddle_code);
 
 create table fiddle_daily(
   engine_code text

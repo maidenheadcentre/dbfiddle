@@ -17,13 +17,12 @@ create function get() returns jsonb as $$
               , engine_total_90 total90
               , engine_total_7 total7
               , engine_total_today total1
-              , ( select encode(fiddle_code,'hex')
-                  from fiddle f
+              , ( select encode(a.allowed_default_fiddle_code,'hex')
+                  from allowed a
                   where
-                    f.engine_code=e.engine_code and
-                    f.version_code=e.engine_default_version_code and 
-                    f.sample_name='' and
-                    f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
+                    a.engine_code=e.engine_code and
+                    a.version_code=e.engine_default_version_code and
+                    a.sample_name=''
                 ) fiddle
               , ( select json_agg(z order by total90 desc)
                   from
@@ -34,14 +33,13 @@ create function get() returns jsonb as $$
                       , version_total_90 total90
                       , version_total_7 total7
                       , version_total_today total1
-                      , ( select encode(fiddle_code,'hex')
-                          from fiddle f
+                      , ( select encode(a.allowed_default_fiddle_code,'hex')
+                          from allowed a
                           where
                             v.version_is_active and
-                            f.engine_code=v.engine_code and
-                            f.version_code=v.version_code and 
-                            f.sample_name='' and
-                            f.fiddle_hash=decode(md5(convert_to(to_jsonb(e.engine_default)::text,'utf8')),'hex')
+                            a.engine_code=v.engine_code and
+                            a.version_code=v.version_code and
+                            a.sample_name=''
                         ) fiddle
                       from
                         version v
@@ -86,5 +84,5 @@ create function redirect(text,text,text,bytea) returns bytea as $$
 $$ language sql security definer set search_path=home,public,pg_temp;
 --
 create function redirect(text,text,text) returns bytea as $$
-  select fiddle_code from fiddle where engine_code=$1 and version_code=$2 and sample_name=$3 and fiddle_hash=(select decode(md5(convert_to(to_jsonb(engine_default)::text,'utf8')),'hex') from engine where engine_code=$1);
+  select allowed_default_fiddle_code from allowed where engine_code=$1 and version_code=$2 and sample_name=$3;
 $$ language sql security definer set search_path=home,public,pg_temp;

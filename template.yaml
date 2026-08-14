@@ -76,6 +76,19 @@ Resources:
                     'overwrite:header.X-Content-Type-Options': 'nosniff'
                     'overwrite:header.Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none"
                     'overwrite:header.Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload'
+            head:
+              responses: {}
+              x-amazon-apigateway-integration:
+                type: http_proxy
+                httpMethod: HEAD
+                uri: https://mcc-fiddle-cdn.s3.eu-west-2.amazonaws.com/{filename}
+                payloadFormatVersion: '1.0'
+                connectionType: INTERNET
+                responseParameters:
+                  '200':
+                    'overwrite:header.X-Content-Type-Options': 'nosniff'
+                    'overwrite:header.Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src none"
+                    'overwrite:header.Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload'
 
   sharedLayer:
     Type: AWS::Serverless::LayerVersion
@@ -101,6 +114,12 @@ Resources:
             ApiId: !Ref httpApi
             Path: /
             Method: GET
+        HeadEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /
+            Method: HEAD
 
   fiddleFunction:
     Type: AWS::Serverless::Function
@@ -119,6 +138,12 @@ Resources:
             ApiId: !Ref httpApi
             Path: /{code}
             Method: GET
+        HeadEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /{code}
+            Method: HEAD
 
   runFunction:
     Type: AWS::Serverless::Function
@@ -186,6 +211,12 @@ Resources:
             ApiId: !Ref httpApi
             Path: /llms.txt
             Method: GET
+        HeadEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /llms.txt
+            Method: HEAD
 
   robotsFunction:
     Type: AWS::Serverless::Function
@@ -203,6 +234,12 @@ Resources:
             ApiId: !Ref httpApi
             Path: /robots.txt
             Method: GET
+        HeadEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /robots.txt
+            Method: HEAD
 
 Outputs:
   fiddle:

@@ -60,6 +60,12 @@ create table down(
 );
 create unique index down_ind on down(engine_code,version_code,sample_name) where down_end_at is null;
 
+create table source(
+  source_network cidr primary key check(family(source_network)=4 and masklen(source_network)=24)
+, source_uuid uuid not null unique default gen_random_uuid()
+, source_ignore_reason text
+);
+
 create table fiddle(
   engine_code text
 , version_code text
@@ -70,6 +76,8 @@ create table fiddle(
 , fiddle_output text[]
 , fiddle_output_json jsonb[]
 , fiddle_is_actual boolean default true not null
+, source_network cidr references source
+, fiddle_agent text
 , primary key (engine_code,version_code,sample_name,fiddle_code)
 , foreign key (engine_code,version_code,sample_name) references allowed(engine_code,version_code,sample_name)
 , check(cardinality(fiddle_input)=cardinality(fiddle_output))
@@ -99,12 +107,6 @@ create table fiddle_daily(
 , foreign key (engine_code,version_code,sample_name) references allowed
 );
 
-create table source(
-  source_network cidr primary key check(family(source_network)=4 and masklen(source_network)=24)
-, source_uuid uuid not null unique default gen_random_uuid()
-, source_ignore_reason text
-);
-
 create table visit(
   engine_code text not null
 , version_code text not null
@@ -113,6 +115,8 @@ create table visit(
 , source_network cidr not null references source
 , visit_at timestamptz default current_timestamp not null
 , visit_referer text
+, visit_agent text
+, visit_accept text
 , foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code)
 );
 create index visit_fiddle_code on visit(fiddle_code);

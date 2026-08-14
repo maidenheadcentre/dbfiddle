@@ -54,11 +54,11 @@ create function get(bytea) returns jsonb as $$
            where fiddle_code=$1 ) z));
 $$ language sql security definer set search_path=fiddle,public,pg_temp;
 --
-create function log(ip inet, referer text, code bytea) returns void set search_path=public,fiddle_fiddle,pg_temp as $$
+create function log(ip inet, referer text, code bytea, agent text default null, accept text default null) returns void set search_path=public,fiddle_fiddle,pg_temp as $$
   insert into source(source_network) values(set_masklen(ip::cidr,24)) on conflict do nothing;
   --
-  insert into visit(engine_code,version_code,sample_name,fiddle_code,source_network,visit_referer)
-  select engine_code,version_code,sample_name,code,set_masklen(ip::cidr,24),referer from fiddle where fiddle_code = code;
+  insert into visit(engine_code,version_code,sample_name,fiddle_code,source_network,visit_referer,visit_agent,visit_accept)
+  select engine_code,version_code,sample_name,code,set_masklen(ip::cidr,24),referer,agent,accept from fiddle where fiddle_code = code;
   --
   insert into visit_daily(engine_code,version_code,sample_name)
   select engine_code,version_code,sample_name from fiddle where fiddle_code = code

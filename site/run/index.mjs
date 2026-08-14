@@ -28,7 +28,7 @@ export const handler = async (event) => {
     // must precede .json(): a parseable failure body would be saved as a fiddle
     if(!response.ok) return failed(response.status);
     const result = await response.json();
-    const [[data]] = await sql`select save(${qp.engine},${qp.version},${qp?.sample ?? ''},array(select jsonb_array_elements_text(${event.body}::text::jsonb)),array(select jsonb_array_elements(${result})))`.values();
+    const [[data]] = await sql`select save(${qp.engine},${qp.version},${qp?.sample ?? ''},array(select jsonb_array_elements_text(${event.body}::text::jsonb)),array(select jsonb_array_elements(${result})),${event.requestContext.http.sourceIp},${event.headers?.['user-agent']})`.values();
     return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: data.toString('base64url') };
   } catch {
     return failed(500);

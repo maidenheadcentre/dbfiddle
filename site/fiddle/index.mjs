@@ -34,7 +34,7 @@ export const handler = async event => {
   const code = Buffer.from(event.pathParameters.code,'base64url');
   const [[data]] = await sql`select get(${code})`.values();
   if(!data) return { statusCode: 404, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: 'not found' };
-  await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referer},${code})`;
+  await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referer},${code},${event.headers?.['user-agent']},${event.headers?.accept})`;
 
   if((data.fiddle_output!==null) && (typeof(data.fiddle_output[0]) !== 'string')){
     data.fiddle_output.forEach( (item,index) => {

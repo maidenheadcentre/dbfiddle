@@ -64,19 +64,27 @@ create table fiddle(
   engine_code text
 , version_code text
 , sample_name text default ''
-, fiddle_hash bytea check(length(fiddle_hash)=16)
 , fiddle_at timestamptz default current_timestamp not null
-, fiddle_code bytea not null unique
+, fiddle_code bytea unique
 , fiddle_input text[] not null
 , fiddle_output text[]
 , fiddle_output_json jsonb[]
 , fiddle_is_actual boolean default true not null
-, primary key (engine_code,version_code,sample_name,fiddle_hash)
-, unique (engine_code,version_code,sample_name,fiddle_code)
+, primary key (engine_code,version_code,sample_name,fiddle_code)
 , foreign key (engine_code,version_code,sample_name) references allowed(engine_code,version_code,sample_name)
 , check(cardinality(fiddle_input)=cardinality(fiddle_output))
 );
 create index fiddle_latest on fiddle(engine_code,version_code,sample_name,fiddle_at);
+
+create table legacy(
+  engine_code text
+, version_code text
+, sample_name text
+, legacy_hash bytea
+, fiddle_code bytea not null
+, primary key (engine_code,version_code,sample_name,legacy_hash)
+, foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code)
+);
 
 alter table allowed add foreign key (engine_code,version_code,sample_name,allowed_default_fiddle_code)
   references fiddle(engine_code,version_code,sample_name,fiddle_code);
@@ -98,13 +106,14 @@ create table source(
 );
 
 create table visit(
-  engine_code text
-, version_code text
-, sample_name text
-, fiddle_code bytea not null references fiddle(fiddle_code)
+  engine_code text not null
+, version_code text not null
+, sample_name text not null
+, fiddle_code bytea not null
 , source_network cidr not null references source
 , visit_at timestamptz default current_timestamp not null
 , visit_referer text
+, foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code)
 );
 create index visit_fiddle_code on visit(fiddle_code);
 create index visit_cron on visit(engine_code,version_code,sample_name,visit_at);

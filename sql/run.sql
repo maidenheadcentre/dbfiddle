@@ -11,17 +11,14 @@ begin
   loop
     begin
       --
-      with i as (insert into fiddle(engine_code,version_code,sample_name,fiddle_hash,fiddle_code,fiddle_input,fiddle_output_json,fiddle_output)
+      with i as (insert into fiddle(engine_code,version_code,sample_name,fiddle_code,fiddle_input,fiddle_output_json,fiddle_output)
                  values(engine
                       , version
                       , sample
-                      , decode(md5(convert_to(to_json(input)::text,'utf8')),'hex')
                       , code
                       , input
                       , output
                       , case when jsonb_typeof(output[1])='string' then (select array_agg(j::text) from (select unnest(output) j) z) end)
-                 on conflict(engine_code,version_code,sample_name,fiddle_hash) do update set fiddle_output_json = excluded.fiddle_output_json
-                                                                                           , fiddle_output = excluded.fiddle_output
                  returning engine_code,version_code,sample_name,fiddle_at,fiddle_code)
         , i2 as (insert into fiddle_daily(engine_code,version_code,sample_name)
                  select engine_code,version_code,sample_name from i

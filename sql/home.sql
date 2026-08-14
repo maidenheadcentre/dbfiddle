@@ -80,7 +80,7 @@ create function get() returns jsonb as $$
 $$ language sql security definer set search_path=home,public,pg_temp;
 --
 create function redirect(text,text,text,bytea) returns bytea as $$
-  select fiddle_code from fiddle where engine_code=$1 and version_code=$2 and sample_name=$3 and fiddle_hash=$4;
+  select fiddle_code from legacy where engine_code=$1 and version_code=$2 and sample_name=$3 and legacy_hash=$4;
 $$ language sql security definer set search_path=home,public,pg_temp;
 --
 create function redirect(text,text,text) returns bytea as $$

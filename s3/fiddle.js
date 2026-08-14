@@ -42,6 +42,12 @@
     navigator.clipboard.writeText(markdown).then(() => alert(message));
   });
 
+  document.getElementById('clear').addEventListener('click', e => {
+    const lines = Array.from(document.querySelectorAll('.line'));
+    lines[lines.length-1].querySelector('.plus:last-child').click();
+    lines.forEach(line => line.querySelector('.remove').click());
+  });
+
   runButton.addEventListener('click', async e => {
 
     if (runButton.dataset.replacement) {
@@ -52,6 +58,7 @@
 
     const remove = [];
     editors.forEach((e,i) => { if(e.state.doc.toString()==='') remove.push(document.querySelectorAll('.line')[i].querySelector('.icon.remove')) });
+    if(remove.length === editors.length) return;
     remove.forEach(e => e.click());
 
     const batches = [];
@@ -68,6 +75,7 @@
     const sampleElement = document.querySelector('.sample:not(.hidden)');
     if( (sampleElement !== null) && (sampleElement.value !== '') ) query += '&sample=' + sampleElement.value;
 
+    for (const b of document.querySelectorAll('#markdown, #clear')) b.disabled = true;
     runButton.disabled = true;
     runButton.classList.add('running');
 
@@ -109,6 +117,7 @@
       if(!aborted) alert(failure);
     } finally {
       for (const editor of editors) editor.setEditable(true);
+      for (const b of document.querySelectorAll('#markdown, #clear')) b.disabled = false;
       runButton.disabled = false;
       runButton.classList.remove('running');
     }

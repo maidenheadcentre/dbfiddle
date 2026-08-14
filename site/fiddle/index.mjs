@@ -139,7 +139,7 @@ export const handler = async event => {
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.de15ae2f.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.3e46de4d.js" defer></script>
+  <script src="/static/fiddle.5468c99a.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -221,6 +221,7 @@ export const handler = async event => {
       <button id="run" accesskey="r"${data.version_is_active||data.replacement?'':' disabled'}${data.replacement?` data-replacement="${data.replacement.code}"`:''}><span>run${data.replacement?` with ${data.replacement.name}`:''}</span><svg class="spinner"><use href="#spinner"></use></svg></button>
       <button id="abort" accesskey="r"><span>abort</span></button>
       <button id="markdown" accesskey="m">markdown</button>
+      <button id="clear" accesskey="c">clear</button>
     </div>
     <div>
       <a href='https://github.com/sponsors/jackdouglas'>donate</a>

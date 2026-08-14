@@ -9,9 +9,7 @@ export const handler = async () => {
 # machine-readable docs: https://dbfiddle.uk/llms.txt
 
 user-agent: *
-Allow: /$
-Allow: /llms.txt
-Disallow: /`;
+Allow: /`;
 
   return {
     statusCode: 200,

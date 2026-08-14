@@ -57,6 +57,7 @@ export const handler = async (event) => {
       <a href='https://github.com/sponsors/jackdouglas'>donate</a>
       <a href='https://github.com/maidenheadcentre/dbfiddle/issues'>feedback</a>
       <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
+      <a href='/llms.txt'>llms.txt</a>
     </div>
   </header>
   <main>

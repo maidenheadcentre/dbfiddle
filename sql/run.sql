@@ -3,7 +3,7 @@ create schema run;
 grant usage on schema run to lambda;
 set search_path to run;
 --
-create function save(engine text, version text, sample text, input text[], output jsonb[], ip inet default null, agent text default null) returns bytea as $$
+create function save(engine text, version text, sample text, input text[], output jsonb[], ip inet default null, agent text default null, lang text[] default null) returns bytea as $$
 declare
   code bytea = gen_random_bytea(6);
   actual bytea;
@@ -12,14 +12,11 @@ begin
   loop
     begin
       --
-      with i as (insert into fiddle(engine_code,version_code,sample_name,fiddle_code,fiddle_input,fiddle_output_json,fiddle_output,source_network,fiddle_agent)
+      with i as (insert into fiddle(engine_code,version_code,sample_name,fiddle_code,source_network,fiddle_agent)
                  values(engine
                       , version
                       , sample
                       , code
-                      , input
-                      , output
-                      , case when jsonb_typeof(output[1])='string' then (select array_agg(j::text) from (select unnest(output) j) z) end
                       , set_masklen(ip::cidr,24)
                       , agent)
                  returning engine_code,version_code,sample_name,fiddle_at,fiddle_code)
@@ -27,6 +24,10 @@ begin
                  select engine_code,version_code,sample_name from i
                  on conflict (engine_code,version_code,sample_name,fiddle_daily_on) do update set fiddle_daily_count = fiddle_daily.fiddle_daily_count+1)
       select fiddle_code from i into actual;
+      --
+      insert into batch(engine_code,version_code,sample_name,fiddle_code,language_code,batch_ordinal,batch_input,batch_output)
+      select engine, version, sample, code, coalesce(nullif(lang[i],''),'sql'), i, input[i], output[i] #>> '{}'
+      from generate_subscripts(input,1) i;
       --
       return actual;
     exception when unique_violation then

@@ -27,61 +27,16 @@ export const handler = async event => {
     return `${backtick} ${title}\n${markdown}\n${backtick}\n`;
   }
 
-  function escapeMarkdownCell (m){
-    return m.replace(/[[*/\|`_<&]/g, String.raw`\$&`).replace(/^ +/gm,m=>m.replaceAll(' ','&numsp;')).replace(/\r?\n|\r/g,'<br>');
-  }
-
   const code = Buffer.from(event.pathParameters.code,'base64url');
   const [[data]] = await sql`select get(${code})`.values();
   if(!data) return { statusCode: 404, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: 'not found' };
   if(event.requestContext.http.method !== 'HEAD') await sql`select log(${event.requestContext.http.sourceIp},${event.headers?.referer},${code},${event.headers?.['user-agent']},${event.headers?.accept})`;
 
-  if((data.fiddle_output!==null) && (typeof(data.fiddle_output[0]) !== 'string')){
-    data.fiddle_output.forEach( (item,index) => {
-
-      let markdown = '';
-
-      item.result.forEach( result => {
-
-        if(Array.isArray(result?.data) && result.data.length) {
-          const colCount = result.head.length;
-          if(colCount) {
-            markdown += '| ';
-            for (let x = 0; x < colCount; x++) markdown += escapeMarkdownCell(result.head[x].toString()) + ' | ';
-            markdown = markdown.slice(0,-1) + '\n| ';
-
-            for (let x = 0; x < colCount; x++) {
-              markdown += ( result.align[x] ? ':' : '-' ) + ("-".repeat(Math.max(0,result.head[x].length - 1))) + ( result.align[x] ? '-' : ':' ) + '|';
-            }
-            markdown += '\n';
-
-            for (let y = 0; y < result.data[0].length; y++) {
-              markdown += '| ';
-              for (let x = 0; x < colCount; x++) {
-                const val = result.data[x][y];
-                markdown += ( (val === null) ? '*null*' : escapeMarkdownCell(val.toString()) ) + ' | ';
-              }
-              markdown = markdown.slice(0,-1) + '\n';
-            }
-            markdown += '\n';
-          
-          }
-        }
-
-        if( (result?.message ?? '') !== '') markdown += backtickWrapPre('status',result.message);
-
-      });
-
-      if( (item.error ?? '') !== '') markdown += backtickWrapPre('error',item.error);
-      data.fiddle_output[index] = markdown;
-    });
-  }
-
   const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
-  const batch = (input = '', output = '', index = null) => {
+  const batch = (input = '', output = '', index = null, lang = '') => {
     return /*html*/`
-      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}">
+      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}>
         <div class="icon plus" title="add batch"><svg><use href="#plus"></use></svg></div>
         <div class="batch">
           <div class="controls">
@@ -139,7 +94,7 @@ export const handler = async event => {
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.de15ae2f.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.5468c99a.js" defer></script>
+  <script src="/static/fiddle.d2b71130.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -213,7 +168,7 @@ export const handler = async event => {
         <option value="${e.engine_code}" data-separator="${e.engine_separator_regex}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
       <select>${data.engines.reduce((p,e) => /*html*/`${p}
       <select class="version${e.engine_code!==data.engine_code?' hidden':''}" data-engine="${e.engine_code}">${e.versions.reduce((p,v) => /*html*/`${p}
-        <option value="${v.version_code}"${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
+        <option value="${v.version_code}" data-languages="${(v.languages ?? []).join(',')}"${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
       </select>`, '')}${data.engines.reduce((p,e) => /*html*/`${p}${e.versions.reduce((p,v) => /*html*/`${p}
       <select class="sample${(e.engine_code!==data.engine_code)||(v.version_code!==data.version_code)?' hidden':''}${(v.samples.length<=1)?' empty':''}" data-engine="${e.engine_code}" data-version="${v.version_code}">${v.samples.reduce((p,c) => /*html*/`${p}
         <option value="${c.sample_name}"${c.sample_name===data.sample_name?' selected':''}>${c.sample_description}</option>`, '')}
@@ -233,7 +188,7 @@ export const handler = async event => {
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>
     </header>
-    <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i)}`, '')}
+    <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i,data?.fiddle_lang?.[i] ?? '')}`, '')}
     </div>${data.adverts.length?/*html*/`
     <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
       <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}

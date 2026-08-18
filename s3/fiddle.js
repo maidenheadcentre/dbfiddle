@@ -62,14 +62,18 @@
     remove.forEach(e => e.click());
 
     const batches = [];
-    const hide = parseInt(Array.from(document.querySelectorAll('.line')).reduce((p,c,i) => p + (c.classList.contains('hide')?'1':'0'), '' ),2);
+    const langs = [];
+    const lines = document.querySelectorAll('.line');
+    const hide = parseInt(Array.from(lines).reduce((p,c,i) => p + (c.classList.contains('hide')?'1':'0'), '' ),2);
     let hash = '';
 
     for (const [index, editor] of editors.entries()){
       editor.setEditable(false);
       batches.push(editor.state.doc.toString());
+      langs.push(lines[index]?.dataset.lang ?? '');
       if(editor.dom.classList.contains('cm-focused')) hash = `#${index}.${editor.state.selection.ranges[0].from}`;
     }
+    const payload = langs.some(l => l) ? batches.map((b,i) => [b, langs[i]]) : batches;
 
     let query = '?engine=' + document.getElementById('engine').value + '&version=' + document.querySelector('.version:not(.hidden)').value;
     const sampleElement = document.querySelector('.sample:not(.hidden)');
@@ -85,7 +89,7 @@
     try {
 
       const controller = new AbortController();
-      
+
       document.getElementById('abort').addEventListener("click", () => {
         if (controller) {
           aborted = true;
@@ -96,7 +100,7 @@
       const response = await fetch('run' + query, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(batches),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -121,7 +125,7 @@
       runButton.disabled = false;
       runButton.classList.remove('running');
     }
- 
+
   });
 
   document.querySelector('main').addEventListener("click", event => {
@@ -148,7 +152,7 @@
         editor.focus();
         return;
       }
-      
+
       if (icon.classList.contains("show")) {
         let hidden = line;
         do {
@@ -168,13 +172,13 @@
         icon.remove();
         return;
       }
-      
+
       if (icon.classList.contains("remove")) {
         line.remove();
         editors.splice(index,1);
         return;
       }
-      
+
       if (icon.classList.contains("split")) {
 
         const seperator = document.getElementById('engine').selectedOptions[0].dataset.separator;
@@ -187,7 +191,7 @@
           document.querySelector('template').content.querySelector('textarea').value = '';
         }
         icon.parentElement.querySelector('.remove').click();
-          
+
         return;
       }
 
@@ -205,6 +209,10 @@
     v.addEventListener("change", event => {
       for (const s of document.querySelectorAll('.sample:not(.hidden)')) s.classList.add('hidden');
       for (const s of document.querySelectorAll(`.sample[data-engine="${v.dataset.engine}"][data-version="${event.target.value}"]`)) s.classList.remove('hidden');
+      const speaks = (event.target.selectedOptions[0]?.dataset.languages ?? '').split(',');
+      for (const line of document.querySelectorAll('.line')){
+        if(line.dataset.lang && !speaks.includes(line.dataset.lang)) delete line.dataset.lang;
+      }
       delete runButton.dataset.replacement;
       runButton.querySelector('span').textContent = 'run';
       runButton.disabled = false;

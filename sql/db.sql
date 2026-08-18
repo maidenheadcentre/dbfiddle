@@ -28,6 +28,19 @@ create table sample(
 , sample_description text not null
 );
 
+create table language(
+  language_code text primary key
+, language_name text not null unique
+);
+
+create table speaks(
+  engine_code text
+, version_code text
+, language_code text references language
+, primary key (engine_code,version_code,language_code)
+, foreign key (engine_code,version_code) references version(engine_code,version_code)
+);
+
 create table allowed(
   engine_code text
 , version_code text
@@ -72,17 +85,30 @@ create table fiddle(
 , sample_name text default ''
 , fiddle_at timestamptz default current_timestamp not null
 , fiddle_code bytea unique
-, fiddle_input text[] not null
-, fiddle_output text[]
-, fiddle_output_json jsonb[]
 , fiddle_is_actual boolean default true not null
 , source_network cidr references source
 , fiddle_agent text
 , primary key (engine_code,version_code,sample_name,fiddle_code)
 , foreign key (engine_code,version_code,sample_name) references allowed(engine_code,version_code,sample_name)
-, check(cardinality(fiddle_input)=cardinality(fiddle_output))
 );
 create index fiddle_latest on fiddle(engine_code,version_code,sample_name,fiddle_at);
+
+alter table allowed add foreign key (engine_code,version_code,sample_name,allowed_default_fiddle_code)
+  references fiddle(engine_code,version_code,sample_name,fiddle_code);
+
+create table batch(
+  engine_code text
+, version_code text
+, sample_name text
+, fiddle_code bytea
+, batch_ordinal integer
+, language_code text not null
+, batch_input text not null
+, batch_output text
+, primary key (engine_code,version_code,sample_name,fiddle_code,batch_ordinal)
+, foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code) on delete cascade
+, foreign key (engine_code,version_code,language_code) references speaks(engine_code,version_code,language_code)
+);
 
 create table legacy(
   engine_code text
@@ -93,9 +119,7 @@ create table legacy(
 , primary key (engine_code,version_code,sample_name,legacy_hash)
 , foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code)
 );
-
-alter table allowed add foreign key (engine_code,version_code,sample_name,allowed_default_fiddle_code)
-  references fiddle(engine_code,version_code,sample_name,fiddle_code);
+create index legacy_fiddle_code on legacy(engine_code,version_code,sample_name,fiddle_code);
 
 create table fiddle_daily(
   engine_code text
@@ -155,7 +179,7 @@ create table rota(
 create table rotated(
   rota_id integer references rota
 , advert_id integer references advert
-, until timestamptz 
+, until timestamptz
 , primary key (rota_id,advert_id)
 );
 

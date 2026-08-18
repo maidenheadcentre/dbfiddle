@@ -11,8 +11,9 @@ create function get(bytea) returns jsonb as $$
                , version_code
                , version_name
                , sample_name
-               , fiddle_input
-               , fiddle_output_json fiddle_output
+               , b.fiddle_input
+               , b.fiddle_lang
+               , b.fiddle_output
                , version_is_active
                , ( select json_build_object('code', dv.version_code, 'name', dv.version_name)
                  from version dv natural join allowed a
@@ -34,8 +35,12 @@ create function get(bytea) returns jsonb as $$
                                               from (select sample_name
                                                          , sample_description
                                                     from allowed a natural join sample
-                                                    where a.engine_code = v.engine_code and 
+                                                    where a.engine_code = v.engine_code and
                                                           a.version_code = v.version_code) z) samples
+                                           , (select json_agg(language_code order by language_code)
+                                              from speaks s
+                                              where s.engine_code = v.engine_code and
+                                                    s.version_code = v.version_code) languages
                                     from version v
                                     where v.engine_code = e.engine_code) z) versions
                         from engine e) z) engines
@@ -51,7 +56,21 @@ create function get(bytea) returns jsonb as $$
                                             limit r.rota_count) a
                         where r.engine_code is null or r.engine_code=e.engine_code) z) adverts
            from fiddle f natural join engine e natural join version v
-           where fiddle_code=$1 ) z));
+                cross join lateral
+                  -- '' is the wire spelling of "the engine's own SQL"; the runners
+                  -- do not accept 'sql' as a language, so it must not reach a client
+                  (select coalesce(array_agg(batch_input order by batch_ordinal),'{}') fiddle_input
+                        , case when count(*) filter (where language_code <> 'sql') > 0
+                               then array_agg(case when language_code = 'sql' then ''
+                                                   else language_code end
+                                              order by batch_ordinal) end fiddle_lang
+                        , case when count(*) = 0 then '{}'::text[]
+                               when count(batch_output) > 0
+                               then array_agg(batch_output order by batch_ordinal) end fiddle_output
+                   from batch
+                   where engine_code = f.engine_code and version_code = f.version_code
+                     and sample_name = f.sample_name and fiddle_code = f.fiddle_code) b
+           where f.fiddle_code=$1 ) z));
 $$ language sql security definer set search_path=fiddle,public,pg_temp;
 --
 create function log(ip inet, referer text, code bytea, agent text default null, accept text default null) returns void set search_path=public,fiddle_fiddle,pg_temp as $$

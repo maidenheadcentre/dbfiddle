@@ -28,7 +28,17 @@ export const handler = async (event) => {
     // must precede .json(): a parseable failure body would be saved as a fiddle
     if(!response.ok) return failed(response.status);
     const result = await response.json();
-    const [[data]] = await sql`select save(${qp.engine},${qp.version},${qp?.sample ?? ''},array(select jsonb_array_elements_text(${event.body}::text::jsonb)),array(select jsonb_array_elements(${result})),${event.requestContext.http.sourceIp},${event.headers?.['user-agent']})`.values();
+    const [[data]] = await sql`
+      with b as (select ${event.body}::text::jsonb j)
+         , elems as (select el, ord from b, jsonb_array_elements(b.j) with ordinality t(el, ord))
+      select save(${qp.engine},${qp.version},${qp?.sample ?? ''}
+                , array(select case when jsonb_typeof(el)='array' then el->>0 else el#>>'{}' end
+                        from elems order by ord)
+                , array(select jsonb_array_elements(${result}))
+                , ${event.requestContext.http.sourceIp}
+                , ${event.headers?.['user-agent']}
+                , array(select case when jsonb_typeof(el)='array' then el->>1 else '' end
+                        from elems order by ord))`.values();
     return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: data.toString('base64url') };
   } catch {
     return failed(500);

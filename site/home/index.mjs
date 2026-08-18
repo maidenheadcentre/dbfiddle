@@ -34,9 +34,9 @@ export const handler = async (event) => {
 <html>
 <head>
   <title>db<>fiddle</title>
-  <meta name="description" content="a free online environment to experiment with SQL and Node.js">
+  <meta name="description" content="a free online environment to experiment with SQL">
   <meta property="og:title" content="db<>fiddle">
-  <meta property="og:description" content="a free online environment to experiment with SQL and Node.js">
+  <meta property="og:description" content="a free online environment to experiment with SQL">
   <meta property="og:url" content="https://${event.requestContext.domainName}/">
   <meta property="og:image" content="https://${event.requestContext.domainName}/static/logo.3ccc0c3c.png">
   <meta name="theme-color" content="#2a5fcd">

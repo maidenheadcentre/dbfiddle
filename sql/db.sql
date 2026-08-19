@@ -143,7 +143,7 @@ create table visit(
 , visit_accept text
 , foreign key (engine_code,version_code,sample_name,fiddle_code) references fiddle(engine_code,version_code,sample_name,fiddle_code)
 );
-create index visit_fiddle_code on visit(fiddle_code);
+create index visit_fiddle_code on visit(fiddle_code,engine_code,version_code,sample_name);
 create index visit_cron on visit(engine_code,version_code,sample_name,visit_at);
 
 create table visit_daily(

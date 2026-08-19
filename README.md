@@ -14,6 +14,10 @@ It is similar to tools like SQL Fiddle and rextester, but it is designed specifi
 
 Fiddles are covered by [Creative Commons CC0](https://creativecommons.org/publicdomain/zero/1.0/legalcode); the code in this repo is AGPL-3.0 (see [LICENSE](LICENSE)).
 
+## Programmatic access
+
+There is an HTTP API for LLMs. If you are an LLM, go read [llms.txt](https://dbfiddle.uk/llms.txt).
+
 ## How it fits together
 
 The front end is a set of small AWS Lambda functions behind an HTTP API, deployed with AWS SAM ([template.yaml](template.yaml)):

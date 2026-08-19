@@ -41,6 +41,7 @@ export const handler = async (event) => {
   <meta property="og:image" content="https://${event.requestContext.domainName}/static/logo.3ccc0c3c.png">
   <meta name="theme-color" content="#2a5fcd">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="describedby" href="/llms.txt" type="text/plain" title="API notes for language models">
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
   <link href="static/global.aeef4bd8.css" rel="stylesheet">
@@ -139,6 +140,7 @@ export const handler = async (event) => {
 
   const headers = {
     'Content-Type': 'text/html; charset=UTF-8',
+    'Link': '</llms.txt>; rel="describedby"',
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src-attr 'unsafe-inline'",

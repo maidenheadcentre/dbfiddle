@@ -15,7 +15,7 @@ const messages = {
 // front end trusts this key: API Gateway 5xx has {message} too
 const failed = status => ({
   statusCode: messages[status] ? status : 502,
-  headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+  headers: { 'Content-Type': 'application/json; charset=UTF-8', 'Link': '</llms.txt>; rel="describedby"' },
   body: JSON.stringify({ message: messages[status] ?? broken, dbfiddle: true }),
 });
 
@@ -39,7 +39,7 @@ export const handler = async (event) => {
                 , ${event.headers?.['user-agent']}
                 , array(select case when jsonb_typeof(el)='array' then el->>1 else '' end
                         from elems order by ord))`.values();
-    return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8' }, body: data.toString('base64url') };
+    return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Link': '</llms.txt>; rel="describedby"' }, body: data.toString('base64url') };
   } catch {
     return failed(500);
   }

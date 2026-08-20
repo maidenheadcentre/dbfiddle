@@ -24,7 +24,7 @@ The front end is a set of small AWS Lambda functions behind an HTTP API, deploye
 
 Most of the application logic lives in the database. The Lambdas are thin: they call a single function in a per-route schema ([`sql/`](sql)) and render the result.
 
-Actually executing SQL is the back end's job: the `run` Lambda POSTs to a separate runner service, which dispatches to a Firecracker microVM — or a full KVM VM for the remaining engines that need one — per engine and version.
+Actually executing SQL is the back end's job: the `run` Lambda POSTs to a separate runner service, which dispatches to a Firecracker microVM per engine and version.
 
 ## Working on it
 

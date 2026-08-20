@@ -95,7 +95,7 @@ export const handler = async event => {
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
   <link href="/static/fiddle.319a5bf0.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
-  <script src="/static/codemirror.4cbc6bf3.js" defer></script>${showplan ? /*html*/`
+  <script src="/static/codemirror.990f5cbd.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
   <script src="/static/fiddle.6291c61f.js" defer></script>
   <template>${batch()}

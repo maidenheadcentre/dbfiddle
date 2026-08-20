@@ -2,16 +2,20 @@ import { EditorView } from "codemirror";
 import { EditorState, Compartment } from '@codemirror/state'
 import { keymap, highlightSpecialChars, drawSelection, highlightActiveLine, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter, showPanel} from '@codemirror/view'
 import { standardKeymap, history, historyKeymap, indentLess, indentMore, toggleComment } from "@codemirror/commands"
-import { defaultHighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'
+import { defaultHighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, foldKeymap, StreamLanguage } from '@codemirror/language'
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { lintKeymap } from '@codemirror/lint'
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
+import { cpp } from '@codemirror/lang-cpp';
+import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } from '@codemirror/lang-sql';
 
 const languageExtension = (engine,lang) => [
     (lang === 'node') ? javascript()
   : (lang === 'python') ? python()
+  : (lang === 'c') ? cpp()
+  : (lang === 'bash') ? StreamLanguage.define(shell)
   : sql({ dialect: (engine === 'postgres') ? PostgreSQL
                  : (engine === 'mysql') ? MySQL
                  : (engine === 'mariadb') ? MariaSQL

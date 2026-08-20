@@ -4,11 +4,24 @@
   const runButton = document.getElementById('run');
   const hashVals = window.location.hash ? window.location.hash.substring(1).split('.') : null;
 
+  const engineCode = () => document.getElementById('engine').value;
+  // 'sql' is the wire spelling of "no data-lang", never a value the runners see
+  const speaks = () => (document.querySelector('.version:not(.hidden)').selectedOptions[0]?.dataset.languages ?? 'sql').split(',');
+  const gate = () => document.querySelector('main').classList.toggle('multilingual', speaks().length > 1);
+
+  const setLang = (line, editor, lang) => {
+    if((line.dataset.lang ?? 'sql') !== lang) document.getElementById('markdown').disabled = true;
+    if(lang === 'sql') delete line.dataset.lang; else line.dataset.lang = lang;
+    editor.setLanguage(engineCode(), lang);
+  };
+
   history.replaceState("", document.title, window.location.pathname + window.location.search);
 
   for (const textarea of document.querySelectorAll('textarea')) {
-    editors.push(cm.editorFromTextArea(textarea, document.getElementById('engine').value));
+    editors.push(cm.editorFromTextArea(textarea, engineCode(), textarea.closest('.line').dataset.lang));
   }
+
+  gate();
 
   if(hashVals){
     editors[+hashVals[0]].focus();
@@ -141,7 +154,7 @@
 
       if (icon.classList.contains("plus")) {
         const clone = document.querySelector('template').content.cloneNode(true);
-        const editor = cm.editorFromTextArea(clone.querySelector('textarea'),document.getElementById('engine').value);
+        const editor = cm.editorFromTextArea(clone.querySelector('textarea'),engineCode());
         if(icon.nextElementSibling){
           line.before(clone);
           editors.splice(index,0,editor);
@@ -164,6 +177,12 @@
 
       if (icon.classList.contains("hide")) {
         line.classList.add('hide');
+        return;
+      }
+
+      if (icon.classList.contains("language")) {
+        const languages = speaks();
+        setLang(line, editors[index], languages[(languages.indexOf(line.dataset.lang ?? 'sql') + 1) % languages.length]);
         return;
       }
 
@@ -209,10 +228,11 @@
     v.addEventListener("change", event => {
       for (const s of document.querySelectorAll('.sample:not(.hidden)')) s.classList.add('hidden');
       for (const s of document.querySelectorAll(`.sample[data-engine="${v.dataset.engine}"][data-version="${event.target.value}"]`)) s.classList.remove('hidden');
-      const speaks = (event.target.selectedOptions[0]?.dataset.languages ?? '').split(',');
-      for (const line of document.querySelectorAll('.line')){
-        if(line.dataset.lang && !speaks.includes(line.dataset.lang)) delete line.dataset.lang;
-      }
+      gate();
+      document.querySelectorAll('.line').forEach((line,i) => {
+        const lang = line.dataset.lang ?? 'sql';
+        setLang(line, editors[i], speaks().includes(lang) ? lang : 'sql');
+      });
       delete runButton.dataset.replacement;
       runButton.querySelector('span').textContent = 'run';
       runButton.disabled = false;

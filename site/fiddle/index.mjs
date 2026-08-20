@@ -24,7 +24,7 @@ export const handler = async event => {
   
   function backtickWrapPre (title = '', markdown = '') {
     const backtick = '`'.repeat(Math.max(3,backtickCount(markdown) + 1));
-    return `${backtick} ${title}\n${markdown}\n${backtick}\n`;
+    return `${backtick}${title}\n${markdown}\n${backtick}\n`;
   }
 
   const code = Buffer.from(event.pathParameters.code,'base64url');
@@ -37,28 +37,29 @@ export const handler = async event => {
   const batch = (input = '', output = '', index = null, lang = '') => {
     return /*html*/`
       <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}>
-        <div class="icon plus" title="add batch"><svg><use href="#plus"></use></svg></div>
+        <div class="icon plus" title="add"><svg><use href="#plus"></use></svg></div>
         <div class="batch">
           <div class="controls">
             <div class="icon hamburger"><svg><use href="#hamburger"></use></svg></div>
-            <div class="icon remove hidden" title="remove batch"><svg><use href="#remove"></use></svg></div>
-            <div class="icon split hidden" title="split batch"><svg><use href="#split"></use></svg></div>
-            <div class="icon hide hidden" title="hide batch"><svg><use href="#hide"></use></svg></div>
+            <div class="icon remove hidden" title="remove"><svg><use href="#remove"></use></svg></div>
+            <div class="icon split hidden" title="split"><svg><use href="#split"></use></svg></div>
+            <div class="icon hide hidden" title="hide"><svg><use href="#hide"></use></svg></div>
+            <div class="icon language hidden" title="language"><svg><use href="#language"></use></svg></div>
           </div>
           <div class="io">
-            <div class="input" data-markdown="${backtickWrapPre('',input.replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
+            <div class="input" data-markdown="${backtickWrapPre(lang || 'sql',input.replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
             <div class="output" data-markdown="${output.replaceAll('"','&quot;')}">${(output !== '') ? md.render(output) : ''}</div>
           </div>
         </div>
-        <div class="icon show" title="show hidden batches"><svg><use href="#show"></use></svg></div>
-        <div class="icon plus" title="add batch"><svg><use href="#plus"></use></svg></div>
+        <div class="icon show" title="show hidden"><svg><use href="#show"></use></svg></div>
+        <div class="icon plus" title="add"><svg><use href="#plus"></use></svg></div>
       </div>`;
   }
 
   const origin = `https://${event.requestContext.domainName}`;
 
   if( accepts(event.headers?.accept).includes('text/markdown') ){
-    const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre('',c)}${data?.fiddle_output?.[i] ?? ''}`, '')
+    const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre(data?.fiddle_lang?.[i] || 'sql',c)}${data?.fiddle_output?.[i] ?? ''}`, '')
                    + `[fiddle](${origin}/${event.pathParameters.code})\n`;
     const headers = {
       'Content-Type': 'text/markdown; charset=UTF-8',
@@ -92,11 +93,11 @@ export const handler = async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.a7f9ef15.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/fiddle.319a5bf0.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
-  <script src="/static/codemirror.de15ae2f.js" defer></script>${showplan ? /*html*/`
+  <script src="/static/codemirror.4cbc6bf3.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.d2b71130.js" defer></script>
+  <script src="/static/fiddle.6291c61f.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -104,7 +105,7 @@ export const handler = async event => {
   <svg>
     <defs>
       <symbol id="plus" viewBox="0 0 10000 16" preserveAspectRatio="xMinYMid slice">
-        <title>add batch</title>
+        <title>add</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
         <line x1="8" y1="3.5" x2="8" y2="12.5" stroke="black" stroke-width="1.5"/>
         <line x1="3.5" y1="8" x2="12.5" y2="8" stroke="black" stroke-width="1.5"/>
@@ -116,7 +117,7 @@ export const handler = async event => {
         <line x1="4" y1="11.5" x2="12" y2="11.5" stroke="black" stroke-width="1.5"/>
       </symbol>
       <symbol id="remove" viewBox="0 0 16 16">
-        <title>remove batch</title>
+        <title>remove</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
         <path d="M 12 4.5 L 11 12.5 L 5 12.5 L 4 4.5 Z" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
         <line x1="7" y1="3.5" x2="9" y2="3.5" stroke="black" stroke-width="1.5"/>
@@ -125,26 +126,29 @@ export const handler = async event => {
         <line x1="9.5" y1="11.5" x2="10" y2="6.5" stroke="black" stroke-width="0.5"/>
       </symbol>
       <symbol id="split" viewBox="0 0 16 16">
-        <title>split batch</title>
+        <title>split</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
         <line x1="3.5" y1="4.5" x2="12" y2="4.5" stroke="black" stroke-width="1.5"/>
         <line x1="7" y1="8" x2="12" y2="8" stroke="black" stroke-width="1.5"/>
         <line x1="7" y1="11.5" x2="12" y2="11.5" stroke="black" stroke-width="1.5"/>
         <line x1="7" y1="4.5" x2="7" y2="11.5" stroke="black" stroke-width="1.5"/>
       </symbol>
-      <symbol id="comment" viewBox="0 0 16 16">
-        <title>comment selection</title>
+      <symbol id="language" viewBox="0 0 16 16">
+        <title>language</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
+        <path d="M 5.2 5 L 3.2 8 L 5.2 11" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
+        <line x1="9.1" y1="4.5" x2="6.9" y2="11.5" stroke="black" stroke-width="1.5"/>
+        <path d="M 10.8 5 L 12.8 8 L 10.8 11" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
       </symbol>
       <symbol id="show" viewBox="0 0 10000 16" preserveAspectRatio="xMinYMid slice">
-        <title>show hidden batches</title>
+        <title>show hidden</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
         <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="black" stroke-width="1.5" fill-opacity="0"/>
         <circle cx="8" cy="8" r="1.5" stroke="black" fill-opacity="0"/>
         <line x1="16" y1="8" x2="10000" y2="8" stroke="black"/>
       </symbol>
       <symbol id="hide" viewBox="0 0 16 16">
-        <title>hide batch</title>
+        <title>hide</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
         <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="black" stroke-width="1.5" fill-opacity="0"/>
         <circle cx="8" cy="8" r="1.5" stroke="black" fill-opacity="0"/>

@@ -1,21 +1,34 @@
 import { EditorView } from "codemirror";
 import { EditorState, Compartment } from '@codemirror/state'
-import { keymap, highlightSpecialChars, drawSelection, highlightActiveLine, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter} from '@codemirror/view'
+import { keymap, highlightSpecialChars, drawSelection, highlightActiveLine, dropCursor, rectangularSelection, crosshairCursor, lineNumbers, highlightActiveLineGutter, showPanel} from '@codemirror/view'
 import { standardKeymap, history, historyKeymap, indentLess, indentMore, toggleComment } from "@codemirror/commands"
 import { defaultHighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, foldKeymap } from '@codemirror/language'
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { lintKeymap } from '@codemirror/lint'
 import { javascript } from '@codemirror/lang-javascript';
+import { python } from '@codemirror/lang-python';
 import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } from '@codemirror/lang-sql';
 
-const editorFromTextArea = (textarea,engine) => {
-  const lang = (engine === 'nodejs') ? javascript() : sql({ dialect: (engine === 'postgres') ? PostgreSQL
-                                                                   : (engine === 'mysql') ? MySQL
-                                                                   : (engine === 'mariadb') ? MariaSQL
-                                                                   : (engine === 'sqlserver') ? MSSQL
-                                                                   : (engine === 'sqlite') ? SQLite
-                                                                   : (engine === 'oracle') ? PLSQL
-                                                                   : StandardSQL });
+const languageExtension = (engine,lang) => [
+    (lang === 'node') ? javascript()
+  : (lang === 'python') ? python()
+  : sql({ dialect: (engine === 'postgres') ? PostgreSQL
+                 : (engine === 'mysql') ? MySQL
+                 : (engine === 'mariadb') ? MariaSQL
+                 : (engine === 'sqlserver') ? MSSQL
+                 : (engine === 'sqlite') ? SQLite
+                 : (engine === 'oracle') ? PLSQL
+                 : StandardSQL }),
+  showPanel.of((!lang || lang === 'sql') ? null : () => {
+    const dom = document.createElement('div');
+    dom.className = 'cm-lang';
+    dom.textContent = lang;
+    return { dom, top: true };
+  }),
+];
+
+const editorFromTextArea = (textarea,engine,lang) => {
+  let language = new Compartment;
   let editable = new Compartment;
   let view = new EditorView({ doc: textarea.value, extensions: [
     lineNumbers(),
@@ -32,7 +45,7 @@ const editorFromTextArea = (textarea,engine) => {
     crosshairCursor(),
     highlightActiveLine(),
     highlightSelectionMatches(),
-    lang,
+    language.of(languageExtension(engine,lang)),
     editable.of(EditorState.readOnly.of(false)),
     keymap.of([
       ...standardKeymap,
@@ -57,6 +70,7 @@ const editorFromTextArea = (textarea,engine) => {
     }),
   ] });
   view.setEditable = b => view.dispatch({ effects: editable.reconfigure(EditorState.readOnly.of(!b)) });
+  view.setLanguage = (engine,lang) => view.dispatch({ effects: language.reconfigure(languageExtension(engine,lang)) });
   textarea.parentNode.insertBefore(view.dom, textarea);
   textarea.remove();
   return view;

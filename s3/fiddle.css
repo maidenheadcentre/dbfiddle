@@ -36,6 +36,7 @@ li { margin-top : 0.5rem; }
 .icon { opacity: 0.3; }
 .icon:hover { opacity: 1; cursor: pointer; }
 .icon svg { height: 1rem; width: 100%; }
+main:not(.multilingual) .language { display: none; }
 
 main>footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem clamp(1rem, 20% - 6rem, 10rem); padding: 1rem; }
 main>footer>a { position: relative; max-width: 30rem; width: fit-content; height: 18rem; border: 1px solid #d9e3f7; display: flex; flex-direction: column; justify-content: center; align-items: center; text-decoration: none; color: black; }
@@ -65,6 +66,9 @@ svg * { stroke-linecap: round; }
 .cm-editor .cm-content { padding: 0; }
 .cm-editor .cm-activeLine, .cm-editor .cm-activeLineGutter { background-color: initial; }
 .cm-editor.cm-focused .cm-activeLine, .cm-editor.cm-focused .cm-activeLineGutter { background-color: rgba(217, 227, 247, 0.5); }
+.cm-panels:has(.cm-lang) { position: absolute; right: 0; left: auto; border: 0; border-radius: 0 0 0 0.2rem; background-color: #d9e3f7; pointer-events: none; }
+.cm-editor:hover .cm-panels:has(.cm-lang), .cm-editor.cm-focused .cm-panels:has(.cm-lang) { opacity: 0.25; }
+.cm-lang { color: #2a5fcd; font-size: smaller; padding: 0 0.3rem; }
 
 .qp-root { overflow-x: auto; }
 .qp-tr { overflow-y: hidden; }

@@ -66,8 +66,8 @@ svg * { stroke-linecap: round; }
 .cm-editor .cm-content { padding: 0; }
 .cm-editor .cm-activeLine, .cm-editor .cm-activeLineGutter { background-color: initial; }
 .cm-editor.cm-focused .cm-activeLine, .cm-editor.cm-focused .cm-activeLineGutter { background-color: rgba(217, 227, 247, 0.5); }
-.cm-panels:has(.cm-lang) { position: absolute; right: 0; left: auto; border: 0; border-radius: 0 0 0 0.2rem; background-color: #d9e3f7; pointer-events: none; }
-.cm-editor:hover .cm-panels:has(.cm-lang), .cm-editor.cm-focused .cm-panels:has(.cm-lang) { opacity: 0.25; }
+.cm-panels:has(.cm-lang) { position: absolute; right: 0; left: auto; border: 0; border-radius: 0 0 0 0.2rem; background-color: #d9e3f7; }
+.cm-panels:has(.cm-lang):hover, .cm-editor.cm-focused .cm-panels:has(.cm-lang) { opacity: 0.25; }
 .cm-lang { color: #2a5fcd; font-size: smaller; padding: 0 0.3rem; }
 
 .qp-root { overflow-x: auto; }

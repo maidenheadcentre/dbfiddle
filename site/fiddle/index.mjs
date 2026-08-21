@@ -3,10 +3,9 @@ import markdownit from 'markdown-it';
 import markdownitbr from './br.mjs';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
+const md = markdownit().use(markdownitbr);
 
 export const handler = async event => {
-
-  const md = markdownit().use(markdownitbr);
 
   function backtickCount (s = '') {
     let longestLength = 0;
@@ -77,6 +76,14 @@ export const handler = async event => {
     ? data.fiddle_output[0].slice(0, 400).trim().replaceAll('"','&quot;')
     : 'a free online environment to experiment with SQL and other code';
 
+  const banner = !data.example ? '' : /*html*/`
+      <div id="banner">${data.version_languages
+          ? `${data.engine_name} runs ${new Intl.ListFormat('en-GB').format(data.version_languages)} alongside SQL`
+          : `${data.example.name} runs ${data.example.language_name} alongside SQL`
+        }: <a href="/${Buffer.from(data.example.code,'hex').toString('base64url')}">see an example</a>. ${
+          data.version_languages ? 'request another language' : `request a language for ${data.engine_name}`
+        } <a href="https://github.com/maidenheadcentre/dbfiddle/issues/new?template=language.yml&${new URLSearchParams({ title: `${data.engine_name}: <language>`, engine: data.engine_name })}">here</a>.</div>`;
+
   const body = /*html*/`<!DOCTYPE html>
 <html>
 <head>
@@ -93,7 +100,7 @@ export const handler = async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.5e0587cc.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/fiddle.8fac4047.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.990f5cbd.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
@@ -174,7 +181,7 @@ export const handler = async event => {
         <option value="${e.engine_code}" data-separator="${e.engine_separator_regex}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
       <select>${data.engines.reduce((p,e) => /*html*/`${p}
       <select class="version${e.engine_code!==data.engine_code?' hidden':''}" data-engine="${e.engine_code}">${e.versions.reduce((p,v) => /*html*/`${p}
-        <option value="${v.version_code}" data-languages="${(v.languages ?? []).join(',')}"${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
+        <option value="${v.version_code}" data-languages="${v.languages.join(',')}"${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
       </select>`, '')}${data.engines.reduce((p,e) => /*html*/`${p}${e.versions.reduce((p,v) => /*html*/`${p}
       <select class="sample${(e.engine_code!==data.engine_code)||(v.version_code!==data.version_code)?' hidden':''}${(v.samples.length<=1)?' empty':''}" data-engine="${e.engine_code}" data-version="${v.version_code}">${v.samples.reduce((p,c) => /*html*/`${p}
         <option value="${c.sample_name}"${c.sample_name===data.sample_name?' selected':''}>${c.sample_description}</option>`, '')}
@@ -192,7 +199,7 @@ export const handler = async event => {
   </header>
   <main>
     <header>
-      <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>
+      <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${banner}
     </header>
     <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i,data?.fiddle_lang?.[i] ?? '')}`, '')}
     </div>${data.adverts.length?/*html*/`

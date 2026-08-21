@@ -4,6 +4,14 @@ grant usage on schema fiddle to lambda;
 set search_path to fiddle;
 --
 create function get(bytea) returns jsonb as $$
+  with example as (
+    select distinct engine_code, version_code, sample_name, fiddle_code, language_code
+    from fiddle natural join batch
+    where (fiddle_code, language_code) in (
+      (decode('afd0da7eb0b6','hex'),'c'),
+      (decode('2fdadfd5dc5d','hex'),'python')
+    )
+  )
   select to_jsonb((
     select z
     from( select engine_code
@@ -15,12 +23,27 @@ create function get(bytea) returns jsonb as $$
                , b.fiddle_lang
                , b.fiddle_output
                , version_is_active
+               , (select array_agg(language_name order by language_name)
+                  from speaks s natural join language
+                  where s.engine_code = f.engine_code and
+                        s.version_code = f.version_code and
+                        s.language_code <> 'sql') version_languages
                , ( select json_build_object('code', dv.version_code, 'name', dv.version_name)
-                 from version dv natural join allowed a
+                   from version dv natural join allowed a
                    where not v.version_is_active
                      and dv.engine_code = e.engine_code
                      and dv.version_code = e.engine_default_version_code
                      and a.sample_name = f.sample_name ) replacement
+               , ( select json_build_object('code', encode(fiddle_code,'hex'), 'name', case when engine_code = f.engine_code then engine_name || ' ' || version_name else engine_name end, 'language_name', language_name)
+                   from example natural join engine natural join version natural join language
+                   where v.version_code = e.engine_default_version_code and
+                         b.fiddle_lang is null and
+                         ((engine_code,version_code) = (f.engine_code,f.version_code) or
+                          not exists (select from speaks s
+                                      where s.engine_code = f.engine_code and
+                                            s.version_code = f.version_code and
+                                            s.language_code <> 'sql'))
+                   order by random() limit 1 ) example
                , (select json_agg(z order by engine_name)
                   from (select engine_code
                              , engine_name

@@ -13,6 +13,7 @@ import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } f
 
 const languageExtension = (engine,lang) => [
     (lang === 'node') ? javascript()
+  : (lang === 'mongosh') ? javascript()
   : (lang === 'python') ? python()
   : (lang === 'c') ? cpp()
   : (lang === 'bash') ? StreamLanguage.define(shell)

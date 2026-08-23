@@ -127,8 +127,7 @@
       const params = new URLSearchParams();
       if(hide) params.append('hide',hide);
 
-      history.pushState("", document.title, (await response.text()) + (params.toString() ? '?' + params.toString() : '') + hash);
-      window.location.reload();
+      window.location = (await response.text()) + (params.toString() ? '?' + params.toString() : '') + hash;
 
     } catch (e) {
       if(!aborted) alert(failure);

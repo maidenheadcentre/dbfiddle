@@ -104,7 +104,7 @@ export const handler = async event => {
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.0adb24fc.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.6291c61f.js" defer></script>
+  <script src="/static/fiddle.6706e418.js" defer></script>
   <template>${batch()}
   </template>
 </head>

@@ -113,64 +113,64 @@ export const handler = async event => {
     <defs>
       <symbol id="plus" viewBox="0 0 10000 16" preserveAspectRatio="xMinYMid slice">
         <title>add</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <line x1="8" y1="3.5" x2="8" y2="12.5" stroke="black" stroke-width="1.5"/>
-        <line x1="3.5" y1="8" x2="12.5" y2="8" stroke="black" stroke-width="1.5"/>
-        <line x1="16" y1="8" x2="10000" y2="8" stroke="black"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <line x1="8" y1="3.5" x2="8" y2="12.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="3.5" y1="8" x2="12.5" y2="8" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="16" y1="8" x2="10000" y2="8" stroke="currentColor"/>
       </symbol>
       <symbol id="hamburger" viewBox="0 0 16 16">
-        <line x1="4" y1="4.5" x2="12" y2="4.5" stroke="black" stroke-width="1.5"/>
-        <line x1="4" y1="8" x2="12" y2="8" stroke="black" stroke-width="1.5"/>
-        <line x1="4" y1="11.5" x2="12" y2="11.5" stroke="black" stroke-width="1.5"/>
+        <line x1="4" y1="4.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="4" y1="11.5" x2="12" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
       </symbol>
       <symbol id="remove" viewBox="0 0 16 16">
         <title>remove</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <path d="M 12 4.5 L 11 12.5 L 5 12.5 L 4 4.5 Z" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
-        <line x1="7" y1="3.5" x2="9" y2="3.5" stroke="black" stroke-width="1.5"/>
-        <line x1="6.5" y1="11.5" x2="6" y2="6.5" stroke="black" stroke-width="0.5"/>
-        <line x1="8" y1="11.5" x2="8" y2="6.5" stroke="black" stroke-width="0.5"/>
-        <line x1="9.5" y1="11.5" x2="10" y2="6.5" stroke="black" stroke-width="0.5"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <path d="M 12 4.5 L 11 12.5 L 5 12.5 L 4 4.5 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
+        <line x1="7" y1="3.5" x2="9" y2="3.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="6.5" y1="11.5" x2="6" y2="6.5" stroke="currentColor" stroke-width="0.5"/>
+        <line x1="8" y1="11.5" x2="8" y2="6.5" stroke="currentColor" stroke-width="0.5"/>
+        <line x1="9.5" y1="11.5" x2="10" y2="6.5" stroke="currentColor" stroke-width="0.5"/>
       </symbol>
       <symbol id="split" viewBox="0 0 16 16">
         <title>split</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <line x1="3.5" y1="4.5" x2="12" y2="4.5" stroke="black" stroke-width="1.5"/>
-        <line x1="7" y1="8" x2="12" y2="8" stroke="black" stroke-width="1.5"/>
-        <line x1="7" y1="11.5" x2="12" y2="11.5" stroke="black" stroke-width="1.5"/>
-        <line x1="7" y1="4.5" x2="7" y2="11.5" stroke="black" stroke-width="1.5"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <line x1="3.5" y1="4.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="7" y1="11.5" x2="12" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="7" y1="4.5" x2="7" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
       </symbol>
       <symbol id="language" viewBox="0 0 16 16">
         <title>language</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <path d="M 5.2 5 L 3.2 8 L 5.2 11" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
-        <line x1="9.1" y1="4.5" x2="6.9" y2="11.5" stroke="black" stroke-width="1.5"/>
-        <path d="M 10.8 5 L 12.8 8 L 10.8 11" stroke="black" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <path d="M 5.2 5 L 3.2 8 L 5.2 11" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
+        <line x1="9.1" y1="4.5" x2="6.9" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M 10.8 5 L 12.8 8 L 10.8 11" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
       </symbol>
       <symbol id="show" viewBox="0 0 10000 16" preserveAspectRatio="xMinYMid slice">
         <title>show hidden</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="black" stroke-width="1.5" fill-opacity="0"/>
-        <circle cx="8" cy="8" r="1.5" stroke="black" fill-opacity="0"/>
-        <line x1="16" y1="8" x2="10000" y2="8" stroke="black"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="currentColor" stroke-width="1.5" fill-opacity="0"/>
+        <circle cx="8" cy="8" r="1.5" stroke="currentColor" fill-opacity="0"/>
+        <line x1="16" y1="8" x2="10000" y2="8" stroke="currentColor"/>
       </symbol>
       <symbol id="hide" viewBox="0 0 16 16">
         <title>hide</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="black" fill-opacity="0"/>
-        <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="black" stroke-width="1.5" fill-opacity="0"/>
-        <circle cx="8" cy="8" r="1.5" stroke="black" fill-opacity="0"/>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <path d="M 3 8 A 5.5 5.5 0 0 1 13 8 M 13 8 A 5.5 5.5 0 0 1 3 8" stroke="currentColor" stroke-width="1.5" fill-opacity="0"/>
+        <circle cx="8" cy="8" r="1.5" stroke="currentColor" fill-opacity="0"/>
         <line x1="13" y1="3" x2="3" y2="13" stroke-width="2" stroke="white"/>
-        <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="black"/>
+        <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="currentColor"/>
       </symbol>
       <symbol id="spinner" viewBox="-1 -1 12 12">
-        <circle cx="0" cy="5" r="1"/>
-        <circle cx="1.464" cy="1.464" r="1"/>
-        <circle cx="5" cy="0" r="1"/>
-        <circle cx="8.536" cy="1.464" r="1"/>
-        <circle cx="10" cy="5" r="1"/>
-        <circle cx="8.536" cy="8.536" r="1"/>
-        <circle cx="5" cy="10" r="1"/>
-        <circle cx="1.464" cy="8.536" r="1"/>
+        <circle cx="0" cy="5" r="1" fill="currentColor"/>
+        <circle cx="1.464" cy="1.464" r="1" fill="currentColor"/>
+        <circle cx="5" cy="0" r="1" fill="currentColor"/>
+        <circle cx="8.536" cy="1.464" r="1" fill="currentColor"/>
+        <circle cx="10" cy="5" r="1" fill="currentColor"/>
+        <circle cx="8.536" cy="8.536" r="1" fill="currentColor"/>
+        <circle cx="5" cy="10" r="1" fill="currentColor"/>
+        <circle cx="1.464" cy="8.536" r="1" fill="currentColor"/>
       </svg>
     </defs>
   </svg>

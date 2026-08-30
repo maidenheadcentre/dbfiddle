@@ -9,7 +9,8 @@ create function get(bytea) returns jsonb as $$
     from fiddle natural join batch
     where (fiddle_code, language_code) in (
       (decode('afd0da7eb0b6','hex'),'c'),
-      (decode('2fdadfd5dc5d','hex'),'python')
+      (decode('2fdadfd5dc5d','hex'),'python'),
+      (decode('1a0d0bbea61e','hex'),'python')
     )
   )
   select to_jsonb((

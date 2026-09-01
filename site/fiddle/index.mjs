@@ -4,6 +4,7 @@ import markdownitbr from './br.mjs';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
 const md = markdownit().use(markdownitbr);
+const RENDERERS = ['echarts'];
 
 export const handler = async event => {
 
@@ -33,9 +34,10 @@ export const handler = async event => {
 
   const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
+  const render = (event.queryStringParameters?.render ?? '').split(',').map(r => RENDERERS.includes(r) ? r : '');
   const batch = (input = '', output = '', index = null, lang = '') => {
     return /*html*/`
-      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}>
+      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}${(index !== null && render[index]) ? ` data-render="${render[index]}"` : ''}>
         <div class="icon plus" title="add"><svg><use href="#plus"></use></svg></div>
         <div class="batch">
           <div class="controls">
@@ -44,6 +46,7 @@ export const handler = async event => {
             <div class="icon split hidden" title="split"><svg><use href="#split"></use></svg></div>
             <div class="icon hide hidden" title="hide"><svg><use href="#hide"></use></svg></div>
             <div class="icon language hidden" title="language"><svg><use href="#language"></use></svg></div>
+            <div class="icon render hidden" title="render"><svg><use href="#chart"></use></svg></div>
           </div>
           <div class="io">
             <div class="input" data-markdown="${backtickWrapPre(lang || 'sql',input.replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
@@ -100,11 +103,12 @@ export const handler = async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.ee27e738.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/fiddle.96d8fb15.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.0adb24fc.js" defer></script>${showplan ? /*html*/`
-  <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.6706e418.js" defer></script>
+  <script src="/static/qp.ea500846.js" defer></script>` : ''}${render.some(Boolean) ? /*html*/`
+  <script src="/static/echarts.61f13280.js" defer></script>` : ''}
+  <script src="/static/fiddle.1f096443.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -146,6 +150,13 @@ export const handler = async event => {
         <path d="M 5.2 5 L 3.2 8 L 5.2 11" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
         <line x1="9.1" y1="4.5" x2="6.9" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
         <path d="M 10.8 5 L 12.8 8 L 10.8 11" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill-opacity="0"/>
+      </symbol>
+      <symbol id="chart" viewBox="0 0 16 16">
+        <title>chart</title>
+        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
+        <line x1="4.5" y1="12" x2="4.5" y2="8.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="8" y1="12" x2="8" y2="4" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="11.5" y1="12" x2="11.5" y2="6.5" stroke="currentColor" stroke-width="1.5"/>
       </symbol>
       <symbol id="show" viewBox="0 0 10000 16" preserveAspectRatio="xMinYMid slice">
         <title>show hidden</title>
@@ -197,7 +208,7 @@ export const handler = async event => {
       <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
     </div>
   </header>
-  <main>
+  <main data-echarts="/static/echarts.61f13280.js">
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${banner}
     </header>

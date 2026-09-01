@@ -9,6 +9,95 @@
   const speaks = () => (document.querySelector('.version:not(.hidden)').selectedOptions[0]?.dataset.languages ?? 'sql').split(',');
   const gate = () => document.querySelector('main').classList.toggle('multilingual', speaks().length > 1);
 
+  const MAX_SOURCE = 500000;
+  const MAX_VALUES = 100000;
+
+  // the output is a program's stdout, so this is the gate, not a formality
+  const validateOption = source => {
+    if (source.length > MAX_SOURCE) throw new Error(`output is ${source.length.toLocaleString()} characters; the renderer accepts up to ${MAX_SOURCE.toLocaleString()}`);
+    const option = JSON.parse(source);
+    if (option === null || typeof option !== 'object' || Array.isArray(option)) throw new Error(`expected an object, got ${option === null ? 'null' : Array.isArray(option) ? 'an array' : typeof option}`);
+    let values = 0;
+    const walk = (node, path) => {
+      if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) walk(v, `${path}.${k}`);
+      } else {
+        values++;
+        if (typeof node === 'string' && /^(image:\/\/|https?:\/\/|\/\/)/i.test(node)) throw new Error(`remote reference at ${path}: ${node}`);
+      }
+    };
+    walk(option, 'option');
+    if (values > MAX_VALUES) throw new Error(`the option has ${values.toLocaleString()} values; the renderer accepts up to ${MAX_VALUES.toLocaleString()}`);
+    return option;
+  };
+
+  // keys must match RENDERERS in site/fiddle/index.mjs, which allowlists the query string
+  const RENDERERS = {
+    echarts: {
+      glyph: '#chart',
+      global: 'echarts',
+      parse: validateOption,
+      draw: (div, option) => {
+        const chart = echarts.init(div, null, { renderer: 'svg' });
+        chart.setOption(option);
+        // echarts sizes itself once at init and never again on its own
+        new ResizeObserver(() => chart.resize()).observe(div);
+      },
+    },
+  };
+
+  const load = (src, global) => new Promise((ok, fail) => {
+    if (window[global]) return ok();
+    const s = document.createElement('script');
+    s.src = src; s.onload = ok; s.onerror = () => fail(new Error(`could not load ${src}`));
+    document.head.append(s);
+  });
+
+  const mark = line => {
+    const name = line.dataset.render ?? '';
+    const icon = line.querySelector('.render');
+    icon.title = name ? `render: ${name}` : 'render';
+    icon.querySelector('use').setAttribute('href', RENDERERS[name]?.glyph ?? '#chart');
+  };
+
+  const paint = async line => {
+    const output = line.querySelector('.output');
+    for (const stale of output.querySelectorAll('.chart, .render-error')) stale.remove();
+    const pre = output.querySelector('pre');
+    pre?.classList.remove('rendered');
+    const name = line.dataset.render;
+    if (!name || output.children.length === 0) return;
+    const fail = message => {
+      const error = document.createElement('code');
+      error.className = 'language-error render-error';
+      error.textContent = `${name}: ${message}`;
+      (pre ?? output.lastElementChild).after(error);
+    };
+    if (!pre) return fail('nothing to render: expected a code block of printed output');
+    try {
+      const renderer = RENDERERS[name];
+      const parsed = renderer.parse(pre.textContent);
+      await load(document.querySelector('main').dataset[name], renderer.global);
+      const div = document.createElement('div');
+      div.className = 'chart';
+      pre.before(div);
+      pre.classList.add('rendered');
+      renderer.draw(div, parsed);
+    } catch (e) {
+      fail(e.message);
+    }
+  };
+
+  const renderParam = () => Array.from(document.querySelectorAll('.line')).map(l => l.dataset.render ?? '').join(',').replace(/,+$/, '');
+  // commas are safe in a query string, and ?render=,,echarts is meant to be readable
+  const search = params => params.toString() ? '?' + params.toString().replaceAll('%2C', ',') : '';
+  const syncRender = () => {
+    const params = new URLSearchParams(window.location.search);
+    const value = renderParam();
+    if (value) params.set('render', value); else params.delete('render');
+    history.replaceState('', document.title, window.location.pathname + search(params));
+  };
+
   const setLang = (line, editor, lang) => {
     if((line.dataset.lang ?? 'sql') !== lang) document.getElementById('markdown').disabled = true;
     if(lang === 'sql') delete line.dataset.lang; else line.dataset.lang = lang;
@@ -35,6 +124,11 @@
       table.after(div);
       QP.showPlan(div, table.querySelector('td').textContent, false);
     }
+  }
+
+  for (const line of document.querySelectorAll('.line[data-render]')) {
+    mark(line);
+    paint(line);
   }
 
   document.getElementById('markdown').addEventListener('click', async e => {
@@ -126,8 +220,10 @@
 
       const params = new URLSearchParams();
       if(hide) params.append('hide',hide);
+      const render = renderParam();
+      if(render) params.append('render',render);
 
-      window.location = (await response.text()) + (params.toString() ? '?' + params.toString() : '') + hash;
+      window.location = (await response.text()) + search(params) + hash;
 
     } catch (e) {
       if(!aborted) alert(failure);
@@ -182,6 +278,16 @@
       if (icon.classList.contains("language")) {
         const languages = speaks();
         setLang(line, editors[index], languages[(languages.indexOf(line.dataset.lang ?? 'sql') + 1) % languages.length]);
+        return;
+      }
+
+      if (icon.classList.contains("render")) {
+        const cycle = ['', ...Object.keys(RENDERERS)];
+        const next = cycle[(cycle.indexOf(line.dataset.render ?? '') + 1) % cycle.length];
+        if (next) line.dataset.render = next; else delete line.dataset.render;
+        mark(line);
+        syncRender();
+        paint(line);
         return;
       }
 

@@ -103,12 +103,12 @@ export const handler = async event => {
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
   <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.96d8fb15.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/fiddle.d1af03f7.css" rel="stylesheet">${showplan ? /*html*/`
   <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
   <script src="/static/codemirror.0adb24fc.js" defer></script>${showplan ? /*html*/`
   <script src="/static/qp.ea500846.js" defer></script>` : ''}${render.some(Boolean) ? /*html*/`
   <script src="/static/echarts.61f13280.js" defer></script>` : ''}
-  <script src="/static/fiddle.1f096443.js" defer></script>
+  <script src="/static/fiddle.ad6c61a8.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -232,7 +232,7 @@ export const handler = async event => {
     'Vary': 'Accept',
     'X-Robots-Tag': 'noindex',
     'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'",
+    'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src 'self' 'unsafe-inline'; form-action 'self'",
     'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",
   };
 

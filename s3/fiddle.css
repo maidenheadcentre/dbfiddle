@@ -40,7 +40,7 @@ li { margin-top : 0.5rem; }
 main:not(.multilingual) .language { display: none; }
 .line[data-render] .render { opacity: 1; color: #2a5fcd; }
 .output>pre.rendered { display: none; }
-.chart { height: 20rem; overflow: hidden; }
+.chart { height: 20rem; overflow: hidden; contain: paint; }
 .batch:has(.cm-lang:hover) :is(.hamburger,.language) { opacity: 1; color: #f5ba00; }
 
 main>footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem clamp(1rem, 20% - 6rem, 10rem); padding: 1rem; }

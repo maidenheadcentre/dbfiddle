@@ -143,7 +143,7 @@ export const handler = async (event) => {
     'Link': '</llms.txt>; rel="describedby"',
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
-    'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src-attr 'unsafe-inline'",
+    'Content-Security-Policy': "base-uri 'none'; frame-ancestors 'none'; default-src 'self'; style-src-attr 'unsafe-inline'; form-action 'self'",
     'Strict-Transport-Security': "max-age=31536000; includeSubDomains; preload",
   };
 

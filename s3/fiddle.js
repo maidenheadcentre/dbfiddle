@@ -38,6 +38,9 @@
       global: 'echarts',
       parse: validateOption,
       draw: (div, option) => {
+        // the two places echarts writes option strings as html; the tooltip only switches before the first setOption
+        for (const tooltip of [option.tooltip ?? []].flat()) tooltip.renderMode = 'richText';
+        for (const toolbox of [option.toolbox ?? []].flat()) delete toolbox.feature?.dataView?.lang;
         const chart = echarts.init(div, null, { renderer: 'svg' });
         chart.setOption(option);
         // echarts sizes itself once at init and never again on its own

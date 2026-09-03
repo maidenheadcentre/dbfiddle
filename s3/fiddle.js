@@ -31,10 +31,10 @@
     return option;
   };
 
+  let diagrams = 0;
   // keys must match RENDERERS in site/fiddle/index.mjs, which allowlists the query string
   const RENDERERS = {
     echarts: {
-      glyph: '#chart',
       global: 'echarts',
       parse: validateOption,
       draw: (div, option) => {
@@ -47,21 +47,25 @@
         new ResizeObserver(() => chart.resize()).observe(div);
       },
     },
+    mermaid: {
+      global: 'mermaid',
+      parse: text => text,
+      draw: async (div, text) => {
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true });
+        // only the svg: bindFunctions would hang flowchart tooltips off the body
+        const { svg } = await mermaid.render(`mermaid-${++diagrams}`, text);
+        div.innerHTML = svg;
+      },
+    },
   };
 
-  const load = (src, global) => new Promise((ok, fail) => {
+  const loading = {};
+  const load = (src, global) => loading[src] ??= new Promise((ok, fail) => {
     if (window[global]) return ok();
     const s = document.createElement('script');
     s.src = src; s.onload = ok; s.onerror = () => fail(new Error(`could not load ${src}`));
     document.head.append(s);
   });
-
-  const mark = line => {
-    const name = line.dataset.render ?? '';
-    const icon = line.querySelector('.render');
-    icon.title = name ? `render: ${name}` : 'render';
-    icon.querySelector('use').setAttribute('href', RENDERERS[name]?.glyph ?? '#chart');
-  };
 
   // status and error fences are a blockquote's pre; only stdout is the output's own
   const stdout = output => output.querySelector(':scope > pre');
@@ -74,29 +78,36 @@
 
   const paint = async line => {
     const output = line.querySelector('.output');
-    for (const stale of output.querySelectorAll('.chart, .render-error')) stale.remove();
-    output.querySelector('.rendered')?.classList.remove('rendered');
+    output.querySelector('.figure')?.remove();
+    for (const shown of output.querySelectorAll('.rendered')) shown.classList.remove('rendered');
     const name = line.dataset.render;
+    const token = line.painting = {};
     if (!name || output.children.length === 0) return;
     const code = 'lang' in line.dataset;
     const source = code ? stdout(output) : single(output);
+    const figure = Object.assign(document.createElement('div'), { className: 'figure' });
+    figure.append(Object.assign(document.createElement('div'), { className: 'renderer', textContent: name }));
+    (source ?? output.firstElementChild).before(figure);
+    const hide = () => { for (const html of code && source ? [source] : output.children) if (html !== figure) html.classList.add('rendered'); };
     const fail = message => {
-      const error = document.createElement('code');
-      error.className = 'language-error render-error';
-      error.textContent = `${name}: ${message}`;
-      (source ?? output.lastElementChild).after(error);
+      const raw = code && source ? source.textContent : output.dataset.markdown;
+      figure.append(Object.assign(document.createElement('code'), { className: 'language-error', textContent: message }), Object.assign(document.createElement('pre'), { textContent: raw }));
+      hide();
     };
     if (!source) return fail(`nothing to render: expected ${code ? 'a code block of printed output' : 'a table of one row and one column'}`);
     try {
       const renderer = RENDERERS[name];
       const parsed = renderer.parse(code ? source.textContent : cell(output.dataset.markdown));
       await load(document.querySelector('main').dataset[name], renderer.global);
-      const div = document.createElement('div');
-      div.className = 'chart';
-      source.before(div);
-      source.classList.add('rendered');
-      renderer.draw(div, parsed);
+      if (line.painting !== token) return;
+      const chart = Object.assign(document.createElement('div'), { className: 'chart' });
+      chart.dataset.render = name;
+      figure.append(chart);
+      hide();
+      await renderer.draw(chart, parsed);
     } catch (e) {
+      if (line.painting !== token) return;
+      figure.querySelector('.chart')?.remove();
       fail(e.message);
     }
   };
@@ -139,10 +150,7 @@
     }
   }
 
-  for (const line of document.querySelectorAll('.line[data-render]')) {
-    mark(line);
-    paint(line);
-  }
+  for (const line of document.querySelectorAll('.line[data-render]')) paint(line);
 
   document.getElementById('markdown').addEventListener('click', async e => {
     let markdown = '';
@@ -298,7 +306,6 @@
         const cycle = ['', ...Object.keys(RENDERERS)];
         const next = cycle[(cycle.indexOf(line.dataset.render ?? '') + 1) % cycle.length];
         if (next) line.dataset.render = next; else delete line.dataset.render;
-        mark(line);
         syncRender();
         paint(line);
         return;

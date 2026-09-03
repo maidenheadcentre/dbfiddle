@@ -2,7 +2,7 @@ body { font-family: sans-serif; }
 details summary { cursor: pointer; }
 table { border-collapse: collapse; }
 
-body>svg { display: none; }
+body>svg:first-child { display: none; }
 
 body>header, body>footer { position: sticky; z-index: 400; color: #2a5fcd; background-color: #d9e3f7; display: flex; justify-content: space-between; align-items: center; }
 body>header>div, body>footer>div { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem; }

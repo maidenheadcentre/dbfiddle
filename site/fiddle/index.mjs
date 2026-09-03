@@ -4,7 +4,7 @@ import markdownitbr from './br.mjs';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
 const md = markdownit().use(markdownitbr);
-const RENDERERS = ['echarts'];
+const RENDERERS = { echarts: '/static/echarts.61f13280.js', mermaid: '/static/mermaid.581ed7d7.js' };
 
 export const handler = async event => {
 
@@ -34,7 +34,7 @@ export const handler = async event => {
 
   const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
-  const render = (event.queryStringParameters?.render ?? '').split(',').map(r => RENDERERS.includes(r) ? r : '');
+  const render = (event.queryStringParameters?.render ?? '').split(',').map(r => Object.hasOwn(RENDERERS, r) ? r : '');
   const batch = (input = '', output = '', index = null, lang = '') => {
     return /*html*/`
       <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}${(index !== null && render[index]) ? ` data-render="${render[index]}"` : ''}>
@@ -102,13 +102,13 @@ export const handler = async event => {
   <link rel="describedby" href="/llms.txt" type="text/plain" title="API notes for language models">
   <link rel="icon" href="/static/favicon.71f8e287.ico">
   <link href="/static/reset.c4a60be7.css" rel="stylesheet">
-  <link href="/static/global.aeef4bd8.css" rel="stylesheet">
-  <link href="/static/fiddle.30b09e8f.css" rel="stylesheet">${showplan ? /*html*/`
-  <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}
+  <link href="/static/global.88b17cae.css" rel="stylesheet">
+  <link href="/static/fiddle.92f8c38f.css" rel="stylesheet">${showplan ? /*html*/`
+  <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}${Object.entries(RENDERERS).filter(([name]) => render.includes(name)).map(([, src]) => /*html*/`
+  <link href="${src}" rel="preload" as="script">`).join('')}
   <script src="/static/codemirror.0adb24fc.js" defer></script>${showplan ? /*html*/`
-  <script src="/static/qp.ea500846.js" defer></script>` : ''}${render.some(Boolean) ? /*html*/`
-  <script src="/static/echarts.61f13280.js" defer></script>` : ''}
-  <script src="/static/fiddle.be562d5a.js" defer></script>
+  <script src="/static/qp.ea500846.js" defer></script>` : ''}
+  <script src="/static/fiddle.aa39bb80.js" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -208,7 +208,7 @@ export const handler = async event => {
       <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
     </div>
   </header>
-  <main data-echarts="/static/echarts.61f13280.js">
+  <main${Object.entries(RENDERERS).map(([name, src]) => ` data-${name}="${src}"`).join('')}>
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${banner}
     </header>

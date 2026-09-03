@@ -44,7 +44,7 @@ export const handler = async (event) => {
   <link rel="describedby" href="/llms.txt" type="text/plain" title="API notes for language models">
   <link rel="icon" href="static/favicon.71f8e287.ico">
   <link href="static/reset.c4a60be7.css" rel="stylesheet">
-  <link href="static/global.aeef4bd8.css" rel="stylesheet">
+  <link href="static/global.88b17cae.css" rel="stylesheet">
   <link href="static/home.7fc5e28d.css" rel="stylesheet">
   <script src="/static/home.2ce1b277.js" defer></script>
   <script type="module" src="static/light.7153b24d.js"></script>

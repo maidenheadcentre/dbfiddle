@@ -38,10 +38,15 @@ li { margin-top : 0.5rem; }
 .icon:hover { opacity: 1; cursor: pointer; }
 .icon svg { height: 1rem; width: 100%; }
 main:not(.multilingual) .language { display: none; }
-.line[data-render] .render { opacity: 1; color: #2a5fcd; }
 .output>.rendered { display: none; }
-.chart { height: 20rem; overflow: hidden; contain: paint; }
-.batch:has(.cm-lang:hover) :is(.hamburger,.language) { opacity: 1; color: #f5ba00; }
+.chart { overflow: hidden; contain: paint; }
+.chart[data-render=echarts] { height: 20rem; }
+.chart[data-render=mermaid] { white-space: normal; }
+.renderer { width: fit-content; color: #2a5fcd; font-size: smaller; padding: 0 0.3rem; background-color: #d9e3f7; border-radius: 0.2rem 0.2rem 0 0; }
+.figure>.language-error, .figure>pre { margin-top: 0.3rem; }
+.figure>.language-error { white-space: pre-wrap; }
+.figure>pre { overflow-x: auto; padding: 0.3rem 0.5rem; background-color: #f0f0f0; border-radius: 0.2rem; }
+.batch:has(.cm-lang:hover) :is(.hamburger,.language), .batch:has(.renderer:hover) :is(.hamburger,.render) { opacity: 1; color: #f5ba00; }
 
 main>footer { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem clamp(1rem, 20% - 6rem, 10rem); padding: 1rem; }
 main>footer>a { position: relative; max-width: 30rem; width: fit-content; height: 18rem; border: 1px solid #d9e3f7; display: flex; flex-direction: column; justify-content: center; align-items: center; text-decoration: none; color: black; }

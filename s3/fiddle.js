@@ -63,28 +63,38 @@
     icon.querySelector('use').setAttribute('href', RENDERERS[name]?.glyph ?? '#chart');
   };
 
+  // status and error fences are a blockquote's pre; only stdout is the output's own
+  const stdout = output => output.querySelector(':scope > pre');
+  const single = output => {
+    const tables = output.querySelectorAll(':scope > table');
+    return tables.length === 1 && tables[0].querySelectorAll('th').length === 1 && tables[0].querySelectorAll('td').length === 1 ? tables[0] : null;
+  };
+  // from the markdown, not the td: markdown-it has already unescaped \" and \\ there, and the html parser has already decoded &numsp;
+  const cell = markdown => markdown.match(/^\|[:-]+\|\n\| (.*) \|$/m)[1].replace(/\\([[*/|`_<&])|<br>|\u2007/g, (m, c) => c ?? (m === '<br>' ? '\n' : ' '));
+
   const paint = async line => {
     const output = line.querySelector('.output');
     for (const stale of output.querySelectorAll('.chart, .render-error')) stale.remove();
-    const pre = output.querySelector('pre');
-    pre?.classList.remove('rendered');
+    output.querySelector('.rendered')?.classList.remove('rendered');
     const name = line.dataset.render;
     if (!name || output.children.length === 0) return;
+    const code = 'lang' in line.dataset;
+    const source = code ? stdout(output) : single(output);
     const fail = message => {
       const error = document.createElement('code');
       error.className = 'language-error render-error';
       error.textContent = `${name}: ${message}`;
-      (pre ?? output.lastElementChild).after(error);
+      (source ?? output.lastElementChild).after(error);
     };
-    if (!pre) return fail('nothing to render: expected a code block of printed output');
+    if (!source) return fail(`nothing to render: expected ${code ? 'a code block of printed output' : 'a table of one row and one column'}`);
     try {
       const renderer = RENDERERS[name];
-      const parsed = renderer.parse(pre.textContent);
+      const parsed = renderer.parse(code ? source.textContent : cell(output.dataset.markdown));
       await load(document.querySelector('main').dataset[name], renderer.global);
       const div = document.createElement('div');
       div.className = 'chart';
-      pre.before(div);
-      pre.classList.add('rendered');
+      source.before(div);
+      source.classList.add('rendered');
       renderer.draw(div, parsed);
     } catch (e) {
       fail(e.message);

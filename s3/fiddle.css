@@ -39,7 +39,7 @@ li { margin-top : 0.5rem; }
 .icon svg { height: 1rem; width: 100%; }
 main:not(.multilingual) .language { display: none; }
 .line[data-render] .render { opacity: 1; color: #2a5fcd; }
-.output>pre.rendered { display: none; }
+.output>.rendered { display: none; }
 .chart { height: 20rem; overflow: hidden; contain: paint; }
 .batch:has(.cm-lang:hover) :is(.hamburger,.language) { opacity: 1; color: #f5ba00; }
 

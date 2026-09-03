@@ -69,8 +69,8 @@
     const tables = output.querySelectorAll(':scope > table');
     return tables.length === 1 && tables[0].querySelectorAll('th').length === 1 && tables[0].querySelectorAll('td').length === 1 ? tables[0] : null;
   };
-  // from the markdown, not the td: markdown-it has already unescaped \" and \\ there, and the html parser has already decoded &numsp;
-  const cell = markdown => markdown.match(/^\|[:-]+\|\n\| (.*) \|$/m)[1].replace(/\\([[*/|`_<&])|<br>|\u2007/g, (m, c) => c ?? (m === '<br>' ? '\n' : ' '));
+  // from the markdown, not the td: markdown-it has already unescaped \" and \\ there
+  const cell = markdown => markdown.match(/^\|[:-]+\|\n\| (.*) \|$/m)[1].replace(/\\([[*/|`_<&])|<br>|&numsp;/g, (m, c) => c ?? (m === '<br>' ? '\n' : ' '));
 
   const paint = async line => {
     const output = line.querySelector('.output');

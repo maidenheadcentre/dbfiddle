@@ -49,8 +49,8 @@ export const handler = async event => {
             <div class="icon render hidden" title="render"><svg><use href="#chart"></use></svg></div>
           </div>
           <div class="io">
-            <div class="input" data-markdown="${backtickWrapPre(lang || 'sql',input.replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
-            <div class="output" data-markdown="${output.replaceAll('"','&quot;')}">${(output !== '') ? md.render(output) : ''}</div>
+            <div class="input" data-markdown="${backtickWrapPre(lang || 'sql',input.replaceAll('&','&amp;').replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
+            <div class="output" data-markdown="${output.replaceAll('&','&amp;').replaceAll('"','&quot;')}">${(output !== '') ? md.render(output) : ''}</div>
           </div>
         </div>
         <div class="icon show" title="show hidden"><svg><use href="#show"></use></svg></div>

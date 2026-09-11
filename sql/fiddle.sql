@@ -11,7 +11,8 @@ create function get(bytea) returns jsonb as $$
       (decode('afd0da7eb0b6','hex'),'c'),
       (decode('2fdadfd5dc5d','hex'),'python'),
       (decode('1a0d0bbea61e','hex'),'python'),
-      (decode('12b2673139f2','hex'),'python')
+      (decode('12b2673139f2','hex'),'python'),
+      (decode('644007ef2345','hex'),'python')
     )
   )
   select to_jsonb((

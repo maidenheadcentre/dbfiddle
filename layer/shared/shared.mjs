@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import zlib from 'node:zlib';
+import { readFileSync } from 'node:fs';
 
 export { postgres };
 
@@ -22,4 +23,10 @@ export const compressed = (body, headers, accept = '') => {
     body: buffer.toString('base64'),
     isBase64Encoded: true,
   };
+};
+
+export const asset = name => {
+  const hashed = JSON.parse(readFileSync('/opt/manifest.json'))[name];
+  if (!hashed) throw new Error(`asset ${name} not in manifest`);
+  return `/static/${hashed}`;
 };

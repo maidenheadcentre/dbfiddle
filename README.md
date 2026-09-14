@@ -39,7 +39,7 @@ scripts/staging.sh  # deploy to staging.dbfiddle.uk
 scripts/prod.sh     # deploy to dbfiddle.uk
 ```
 
-Static assets are content-hashed at build time and the hashed names are rewritten into the Lambda sources, so `scripts/cdn.sh` shows up as a diff in `site/*/index.mjs` whenever an asset changes.
+Static assets are content-hashed at build time. `scripts/cdn.sh` writes `layer/shared/manifest.json`, basename to hashed name, and pages resolve every static URL through `asset()` in `layer/shared/shared.mjs`. The manifest is not committed; a deploy that skips `scripts/cdn.sh` fails on the missing file.
 
 ## Back end
 

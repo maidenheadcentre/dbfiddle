@@ -1,10 +1,10 @@
-import { postgres, compressed, accepts } from '/opt/shared.mjs';
+import { postgres, compressed, accepts, asset } from '/opt/shared.mjs';
 import markdownit from 'markdown-it';
 import markdownitbr from './br.mjs';
 
 const sql = postgres({ transform: { undefined: null }, connection: { options: '-c search_path=fiddle' } });
 const md = markdownit().use(markdownitbr);
-const RENDERERS = { echarts: '/static/echarts.61f13280.js', mermaid: '/static/mermaid.581ed7d7.js' };
+const RENDERERS = { echarts: asset('echarts.js'), mermaid: asset('mermaid.js') };
 
 export const handler = async event => {
 
@@ -96,19 +96,19 @@ export const handler = async event => {
   <meta property="og:title" content="${data.engine_name} ${data.version_name}">
   <meta property="og:description" content="${ogDescription}">
   <meta property="og:url" content="${origin}/${event.pathParameters.code}">
-  <meta property="og:image" content="${origin}/static/logo.3ccc0c3c.png">
+  <meta property="og:image" content="${origin}${asset('logo.png')}">
   <meta name="theme-color" content="#2a5fcd">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="describedby" href="/llms.txt" type="text/plain" title="API notes for language models">
-  <link rel="icon" href="/static/favicon.71f8e287.ico">
-  <link href="/static/reset.c4a60be7.css" rel="stylesheet">
-  <link href="/static/global.88b17cae.css" rel="stylesheet">
-  <link href="/static/fiddle.92f8c38f.css" rel="stylesheet">${showplan ? /*html*/`
-  <link href="/static/qp.8db7ca63.css" rel="stylesheet">` : ''}${Object.entries(RENDERERS).filter(([name]) => render.includes(name)).map(([, src]) => /*html*/`
+  <link rel="icon" href="${asset('favicon.ico')}">
+  <link href="${asset('reset.css')}" rel="stylesheet">
+  <link href="${asset('global.css')}" rel="stylesheet">
+  <link href="${asset('fiddle.css')}" rel="stylesheet">${showplan ? /*html*/`
+  <link href="${asset('qp.css')}" rel="stylesheet">` : ''}${Object.entries(RENDERERS).filter(([name]) => render.includes(name)).map(([, src]) => /*html*/`
   <link href="${src}" rel="preload" as="script">`).join('')}
-  <script src="/static/codemirror.0adb24fc.js" defer></script>${showplan ? /*html*/`
-  <script src="/static/qp.ea500846.js" defer></script>` : ''}
-  <script src="/static/fiddle.aa39bb80.js" defer></script>
+  <script src="${asset('codemirror.js')}" defer></script>${showplan ? /*html*/`
+  <script src="${asset('qp.js')}" defer></script>` : ''}
+  <script src="${asset('fiddle.js')}" defer></script>
   <template>${batch()}
   </template>
 </head>
@@ -220,7 +220,7 @@ export const handler = async event => {
   </main>
   <footer>
     <div><a href="/">db<>fiddle</a> © 2017-${new Date().getFullYear()} Jack Douglas</div>
-    <div><a href="https://github.com/maidenheadcentre/dbfiddle"><img src="/static/github.138da068.svg" alt="GitHub"></a><a href="https://x.com/dbfiddleuk"><img src="/static/x.284fbff5.svg" alt="X"></a></div>
+    <div><a href="https://github.com/maidenheadcentre/dbfiddle"><img src="${asset('github.svg')}" alt="GitHub"></a><a href="https://x.com/dbfiddleuk"><img src="${asset('x.svg')}" alt="X"></a></div>
   </footer>
 </body>
 </html>`

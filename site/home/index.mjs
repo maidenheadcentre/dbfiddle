@@ -1,4 +1,4 @@
-import { postgres, compressed } from '/opt/shared.mjs';
+import { postgres, compressed, asset } from '/opt/shared.mjs';
 const sql = postgres({ connection: { options: '-c search_path=home' } });
 
 export const handler = async (event) => {
@@ -38,16 +38,16 @@ export const handler = async (event) => {
   <meta property="og:title" content="db<>fiddle">
   <meta property="og:description" content="a free online environment to experiment with SQL">
   <meta property="og:url" content="https://${event.requestContext.domainName}/">
-  <meta property="og:image" content="https://${event.requestContext.domainName}/static/logo.3ccc0c3c.png">
+  <meta property="og:image" content="https://${event.requestContext.domainName}${asset('logo.png')}">
   <meta name="theme-color" content="#2a5fcd">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="describedby" href="/llms.txt" type="text/plain" title="API notes for language models">
-  <link rel="icon" href="static/favicon.71f8e287.ico">
-  <link href="static/reset.c4a60be7.css" rel="stylesheet">
-  <link href="static/global.88b17cae.css" rel="stylesheet">
-  <link href="static/home.7fc5e28d.css" rel="stylesheet">
-  <script src="/static/home.2ce1b277.js" defer></script>
-  <script type="module" src="static/light.7153b24d.js"></script>
+  <link rel="icon" href="${asset('favicon.ico')}">
+  <link href="${asset('reset.css')}" rel="stylesheet">
+  <link href="${asset('global.css')}" rel="stylesheet">
+  <link href="${asset('home.css')}" rel="stylesheet">
+  <script src="${asset('home.js')}" defer></script>
+  <script type="module" src="${asset('light.js')}"></script>
 </head>
 <body>
   <header>
@@ -133,7 +133,7 @@ export const handler = async (event) => {
   </main>
   <footer>
   <div>db<>fiddle © 2017-${new Date().getFullYear()} Jack Douglas</div>
-  <div><a href="https://github.com/maidenheadcentre/dbfiddle"><img src="/static/github.138da068.svg" alt="GitHub"></a><a href="https://x.com/dbfiddleuk"><img src="/static/x.284fbff5.svg" alt="X"></a></div>
+  <div><a href="https://github.com/maidenheadcentre/dbfiddle"><img src="${asset('github.svg')}" alt="GitHub"></a><a href="https://x.com/dbfiddleuk"><img src="${asset('x.svg')}" alt="X"></a></div>
   </footer>
 </body>
 </html>`

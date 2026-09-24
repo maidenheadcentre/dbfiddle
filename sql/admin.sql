@@ -17,13 +17,3 @@ create function new_version(ecode text, vcode text, vname text, lcode text defau
 $$ language sql security definer set search_path=public,admin,pg_temp;
 --
 revoke all on all functions in schema admin from public;
-
---select admin.new_engine('timescaledb','TimescaleDB',$$select installed_version from pg_available_extensions where name = 'timescaledb';$$,';','2.11','2.11');
---select admin.new_version('postgres','19','19 beta 1');
---select admin.new_version('mysql','9.7','9.7');
---update engine set engine_default_version_code='9.7' where engine_code='mysql';
---update allowed set allowed_default_fiddle_code=decode(translate('X1GSk8pZ','-_','+/'),'base64') where engine_code='duckdb' and version_code='1.4' and sample_name='';
---update allowed set allowed_default_fiddle_code=decode(translate('GJDWMF55','-_','+/'),'base64') where engine_code='postgres' and version_code='19' and sample_name='';
---insert into sample values('fiddle','db<>fiddle');
---insert into allowed(engine_code,version_code,sample_name) values('postgres','19','fiddle');
---update allowed set allowed_default_fiddle_code=decode(translate('HgpkWyEa','-_','+/'),'base64') where engine_code='postgres' and version_code='19' and sample_name='fiddle';

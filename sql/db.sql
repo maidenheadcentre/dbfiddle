@@ -127,9 +127,11 @@ create table fiddle_daily(
 , sample_name text
 , fiddle_daily_on date default current_date
 , fiddle_daily_count integer default 1 not null
+, fiddle_daily_count_distinct_source integer
 , primary key (engine_code,version_code,sample_name,fiddle_daily_on)
 , foreign key (engine_code,version_code,sample_name) references allowed
 );
+create unique index fiddle_daily_cron on fiddle_daily(engine_code,version_code,sample_name,fiddle_daily_on) where fiddle_daily_count_distinct_source is null;
 
 create table visit(
   engine_code text not null

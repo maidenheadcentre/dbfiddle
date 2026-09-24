@@ -218,6 +218,30 @@ Resources:
             Path: /llms.txt
             Method: HEAD
 
+  dumpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Timeout: 10
+      MemorySize: 512
+      Policies: AWSLambdaVPCAccessExecutionRole
+      CodeUri: site/dump
+      Handler: index.handler
+      Layers:
+        - !Ref sharedLayer
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /dump
+            Method: GET
+        HeadEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref httpApi
+            Path: /dump
+            Method: HEAD
+
   robotsFunction:
     Type: AWS::Serverless::Function
     Properties:

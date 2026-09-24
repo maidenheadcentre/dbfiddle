@@ -24,3 +24,6 @@ revoke all on all functions in schema admin from public;
 --update engine set engine_default_version_code='9.7' where engine_code='mysql';
 --update allowed set allowed_default_fiddle_code=decode(translate('X1GSk8pZ','-_','+/'),'base64') where engine_code='duckdb' and version_code='1.4' and sample_name='';
 --update allowed set allowed_default_fiddle_code=decode(translate('GJDWMF55','-_','+/'),'base64') where engine_code='postgres' and version_code='19' and sample_name='';
+--insert into sample values('fiddle','db<>fiddle');
+--insert into allowed(engine_code,version_code,sample_name) values('postgres','19','fiddle');
+--update allowed set allowed_default_fiddle_code=decode(translate('HgpkWyEa','-_','+/'),'base64') where engine_code='postgres' and version_code='19' and sample_name='fiddle';

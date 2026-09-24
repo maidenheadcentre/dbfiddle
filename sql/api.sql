@@ -7,4 +7,5 @@ begin;
 \ir admin.sql
 \ir robots.sql
 \ir llms.sql
+\ir dump.sql
 commit;

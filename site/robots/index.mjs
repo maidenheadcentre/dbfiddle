@@ -9,6 +9,7 @@ export const handler = async () => {
 # machine-readable docs: https://dbfiddle.uk/llms.txt
 
 user-agent: *
+Disallow: /dump
 Allow: /`;
 
   return {

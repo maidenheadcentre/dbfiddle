@@ -1,0 +1,10 @@
+# build-dependent: read these answers, never diff them, and never move them into corpus.txt
+["select @@version"]
+["select cast(serverproperty('ProductVersion') as varchar(50)) as v, cast(serverproperty('ProductLevel') as varchar(50)) as l, cast(serverproperty('Edition') as varchar(50)) as e"]
+["select cast(serverproperty('Collation') as varchar(100)) as server_collation"]
+["select @@language as lang, @@options as opts"]
+["select cast(serverproperty('IsIntegratedSecurityOnly') as int) as intsec, cast(serverproperty('EngineEdition') as int) as engine_edition"]
+["select is_srvrolemember('sysadmin') as sysadmin, is_srvrolemember('securityadmin') as securityadmin"]
+["select convert(varchar(30), getutcdate(), 126) as utcnow"]
+["select cast(sqlserver_start_time as varchar(30)) as start_time, cpu_count from sys.dm_os_sys_info"]
+["select name, value_in_use from sys.configurations where name in ('max server memory (MB)','recovery interval (min)') order by name"]

@@ -1,0 +1,113 @@
+# nothing volatile: no random(), gen_random_uuid(), now(), clock_timestamp(), txid_current()
+# or pg_backend_pid(), and no version() or current_setting(), which change across a rebuild
+
+# basic shapes: int right-alignment, text left-alignment, NULL rendering, no rows
+["select 1"]
+["select 1 n, 'a' s"]
+["select null::int n, null::text t, null::bool b"]
+["select 1 where false"]
+["select 'a' s union all select null order by 1 nulls last"]
+["select i from generate_series(1,5) i order by i"]
+
+# numeric family - alignment is driven by the type oid, so cover each side of the list
+["select 1::int2 a, 1::int4 b, 1::int8 c, 1.5::numeric d, 1.5::money e"]
+["select 1.5::float4 a, 1.5::float8 b"]
+["select 1.23456789012345678901234567890::numeric n"]
+["select -0.000000001::numeric n, 0::numeric z"]
+["select 'NaN'::numeric n, 'Infinity'::float8 i, '-Infinity'::float8 mi"]
+["select 2147483647::int4 a, 9223372036854775807::int8 b"]
+
+# date / time / interval - constants only, nothing that reads the clock
+["select date '2020-01-01' d"]
+["select timestamp '2020-01-01 12:34:56.789' t"]
+["select timestamptz '2020-01-01 12:34:56.789+00' t"]
+["select time '12:34:56' t, timetz '12:34:56+02' tz"]
+["select interval '2 years 3 days 04:05:06.7' i"]
+["select date '2020-03-01' - date '2020-01-01' d"]
+
+# text, char, unicode, wide values, long column names
+["select 'plain'::text t, 'padded'::char(10) c, 'v'::varchar(5) v"]
+["select 'héllo wörld ☃'::text u"]
+["select '😀 emoji'::text e"]
+["select repeat('x',100) s"]
+["select repeat('x',4000) s"]
+["select 1 as this_is_a_very_long_column_name_x"]
+["select 1 as \"col|with*specials\""]
+["select 1 a, 2 a, 3 a"]
+
+# markdown escaping: the escape set is [ * / | ` _ < & , plus <br> for newlines and
+# &numsp; for leading spaces
+["select '|pipe *star _under `tick <lt &amp [brack /slash' s"]
+["select 'line1' || chr(10) || '  indented' s"]
+["select ' leading space' s"]
+["select 'trailing backtick ```' s"]
+["select E'tab\\there' s"]
+["select E'crlf\\r\\nnext' s"]
+["select 'a' || chr(13) || 'cr only' s"]
+
+# bytea / bit / uuid / network / enum-ish - literal values, never generated
+["select '\\xdeadbeef'::bytea b"]
+["select ''::bytea b"]
+["select decode('414243','hex')::bytea b"]
+["select B'1011'::bit(4) b, B'101'::varbit v"]
+["select '11111111-2222-3333-4444-555555555555'::uuid u"]
+["select '192.168.0.1'::inet i, '10.0.0.0/8'::cidr c, '08:00:2b:01:02:03'::macaddr m"]
+["select true a, false b, null::bool c"]
+
+# arrays, ranges, composite, json/jsonb (jsonb reorders and normalises keys)
+["select '{1,2,NULL}'::int[] a, '{}'::text[] e"]
+["select array['a|b','c`d',null]::text[] t"]
+["select array[array[1,2],array[3,4]] n"]
+["select '{\"b\":1,\"a\":2}'::jsonb j, '{\"b\":1,\"a\":2}'::json k"]
+["select '{\"a\":[1,2,{\"b\":null}]}'::jsonb j"]
+["select jsonb_pretty('{\"a\":1,\"b\":[1,2]}'::jsonb) p"]
+["select json_build_object('k','v|x') o"]
+["select int4range(1,5) r, numrange(1.5,2.5,'[]') n"]
+["select row(1,'a',null)::text c"]
+
+# DDL + DML row counts and multi-statement state (one session per fiddle)
+["create table t(a int primary key, b text)","insert into t values(1,'x')","insert into t select i,'y' from generate_series(2,4) i","update t set b='z' where a>2","select * from t order by a","delete from t where a=1","select count(*) from t"]
+["create table t(a int)","insert into t values(1),(2) returning a","truncate t","select count(*) from t"]
+["create table t(a int); insert into t values(1); select * from t"]
+["create temp table tt(a int) on commit drop","insert into tt values(9)","select * from tt"]
+
+# status fences with no result set, and NOTICE (the runner does not surface notices)
+["do $$ begin raise notice 'a notice'; end $$"]
+["do $$ begin perform 1; end $$"]
+["create table t(a int)","comment on table t is 'c'","analyze t","select 1"]
+["begin","select 1","commit"]
+
+# errors: syntax, undefined object, runtime, constraint, cast, explicit raise
+["select * from no_such_table"]
+["select from"]
+["select 1/0"]
+["select 'abc'::int"]
+["create table t(a int primary key)","insert into t values(1)","insert into t values(1)","select * from t"]
+["create table t(a int check (a>0))","insert into t values(-1)"]
+["do $$ begin raise exception 'custom %', 'message'; end $$"]
+["select no_such_function()"]
+
+# aborted-transaction behaviour: later statements in the block are refused, and the
+# implicit rollback must leave the session usable for the next batch
+["begin","select 1/0","select 2","commit","select 3"]
+["begin; select 1/0; select 2;"]
+
+# multi-batch where the middle batch fails - later batches must still run
+["select 1 a","select from","select 2 b"]
+["select 1 a","select * from no_such_table","select 2 b"]
+
+# statement trimming: trailing ';', repeated ';', trailing whitespace, empty, blank
+["select 1;"]
+["select 1;;;"]
+["select 1   "]
+[""]
+["   "]
+["select 1","","select 2"]
+
+# extensions installed as packages but not preloaded into the fiddle database
+["create extension hstore","select 'a=>1, b=>NULL'::hstore h"]
+["create extension plpython3u","do $$ plpy.notice('x') $$ language plpython3u"]
+
+# plpgsql control flow and a set-returning function
+["create function f(n int) returns int language plpgsql as $$ begin return n*2; end $$","select f(21) x"]
+["select * from generate_series(1,3) g(i) order by i desc"]

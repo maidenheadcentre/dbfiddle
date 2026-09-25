@@ -1,0 +1,55 @@
+# nothing volatile: no random, time, os.environ, pid or sqlite version
+# the traceback case stays a single-batch line: its script path /tmp/batch<N>.py names the batch
+
+# --- the language runs at all ---
+[["print(6*7)","python"]]
+
+# --- a string element is still SQL, and elements may be mixed ---
+[["select 1 as sql_pair",""]]
+[["select 1 as first",""],"select 2 as second",["print(3)","python"]]
+["select 1 as plain",["print(2)","python"],"select 3 as plain_again"]
+
+# --- the database is shared through /data/fiddle.db: SQL creates, the language reads ---
+["create table t as select 42 x",["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nprint(c.execute('select x from t').fetchone()[0])","python"]]
+["create table t(x); insert into t values (1),(2),(3)",["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nprint(c.execute('select sum(x), count(*) from t').fetchall())","python"]]
+[["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nprint(c.execute(\"select 1.5, x'0102', 'café', null\").fetchone())","python"]]
+
+# --- the language writes: the module's default is not autocommit, so the user commits ---
+["create table t (x int)",["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nc.execute('insert into t values (7)')\nc.commit()","python"],"select * from t"]
+["create table t (x int)",["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nc.execute('insert into t values (7)')","python"],"select count(*) n from t"]
+["create table t (x int)",["import sqlite3\nwith sqlite3.connect('/data/fiddle.db') as c:\n    c.execute('insert into t values (8)')","python"],"select * from t"]
+["create table t (x int)",["import sqlite3\nc = sqlite3.connect('/data/fiddle.db', autocommit=True)\nc.execute('insert into t values (9)')","python"],"select * from t"]
+
+# --- python is on the SQL batches' sqlite: the same dialect (no double-quoted strings) and the same extras ---
+["select \"abc\"",["import sqlite3\ntry:\n    sqlite3.connect('/data/fiddle.db').execute('select \"abc\"')\nexcept sqlite3.OperationalError as e:\n    print(e)","python"]]
+[["import sqlite3\nprint(sqlite3.connect('/data/fiddle.db').execute('select pow(2,10), json_array(1,2)').fetchone())","python"]]
+
+# --- an engine error reaches the language as sqlite3.OperationalError ---
+[["import sqlite3\ntry:\n    sqlite3.connect('/data/fiddle.db').execute('select nosuch')\nexcept sqlite3.OperationalError as e:\n    print(e)","python"]]
+
+# --- a connection is a connection: a SQL batch's temp table and open transaction are the runner's, not python's ---
+["create temp table tt as select 1 x",["import sqlite3\ntry:\n    sqlite3.connect('/data/fiddle.db').execute('select * from tt')\nexcept sqlite3.OperationalError as e:\n    print(e)","python"],"select * from tt"]
+["create table t(x); begin; insert into t values (1)",["import sqlite3\nprint(sqlite3.connect('/data/fiddle.db').execute('select count(*) from t').fetchone()[0])","python"],"commit; select count(*) n from t"]
+
+# --- one process per batch: nothing carries over ---
+[["x = 1","python"],["print('x' in dir())","python"]]
+
+# --- stdout is a plain fence and widens past backticks; stderr and a non-zero exit are error fences ---
+[["print('```')","python"]]
+[["print('café 日本語 🐦')","python"]]
+[["print('a\\nb\\nc')","python"]]
+[["import sys\nsys.stdout.write('no trailing newline')","python"]]
+[["import sys\nsys.stderr.write('to stderr\\n')","python"]]
+[["print('out')\nimport sys\nsys.stderr.write('err\\n')","python"]]
+[["pass","python"]]
+[["import sys\nsys.exit(3)","python"]]
+[["1/0","python"]]
+
+# --- a language nothing speaks is fenced, and only its own batch ---
+[["select 1 as before",""],["print(1)","node"],["select 2 as after",""]]
+[["print(1)","PYTHON"]]
+
+# --- malformed elements fail the payload, as a malformed array always has ---
+[["one","two","three"]]
+[["text",1]]
+[[]]

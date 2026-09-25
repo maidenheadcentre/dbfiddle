@@ -1,0 +1,160 @@
+# nothing volatile: no random(), randomblob(), datetime('now'), julianday('now') or
+# unixepoch(), and no sqlite_version(), pragma compile_options or EXPLAIN QUERY PLAN,
+# which change across versions. Every multi-row case has an ORDER BY.
+
+# --- scalar types and formatting ---
+["select 1"]
+["select 1, 2, 3"]
+["select -1, 0, 9223372036854775807, -9223372036854775808"]
+["select 1.5, 2.0, -0.25, 0.1"]
+["select 1e300, 1e-300, 1.0/3"]
+["select 'text'"]
+["select ''"]
+["select null"]
+["select typeof(1), typeof(1.0), typeof('a'), typeof(null), typeof(x'01')"]
+["select cast('123' as integer), cast(1.9 as integer), cast(1 as text), cast('abc' as integer)"]
+["select cast(1 as real), cast('1.5e2' as real), cast(null as text)"]
+
+# --- blobs (rendered as backticked lowercase hex) ---
+["select x'00ff10'"]
+["select x''"]
+["select hex(x'deadbeef'), length(x'deadbeef'), typeof(x'01')"]
+["select zeroblob(4)"]
+["select cast('abc' as blob)"]
+
+# --- alignment is decided from the values, not a declared type ---
+["select 1 as n union all select 2 order by 1"]
+["select 'a' as t union all select 'b' order by 1"]
+["select 1 as m union all select 'x' order by 1"]
+["select null as z union all select null"]
+["select 1.5 as r union all select 2 order by 1"]
+["create table a(i integer, t text); insert into a values(1,'x'),(2,'y'); select * from a order by i"]
+
+# --- markdown escaping ---
+["select 'a|b' as 'c|d'"]
+["select 'back`tick`'"]
+["select 'a*b_c[d]e<f>g&h/i'"]
+["select '  leading spaces'"]
+["select '\\\"' bq, '\\\\' bb, 'a\\b' ab, 'a' || char(9) || 'b' tab"]
+["select 'line1' || char(10) || 'line2'"]
+["select 'cr' || char(13) || 'after'"]
+["select 'crlf' || char(13) || char(10) || 'end'"]
+["select '```fenced```'"]
+["select 'pipe|in|cell' as 'pipe|in|header'"]
+
+# --- unicode ---
+["select 'héllo wörld'"]
+["select 'δοκιμή 中文'"]
+["select char(128169), char(233), char(0x4e2d)"]
+["select length('é中'), octet_length('é中')"]
+["select upper('straße'), lower('ÉTÉ')"]
+
+# --- errors ---
+["slect 1"]
+["select * from no_such_table"]
+["select no_such_column from (select 1)"]
+["select \"double quoted\""]
+["select abs(-9223372036854775808)"]
+["select 1 +"]
+["select no_such_function(1)"]
+["create table dup(a); create table dup(a)"]
+["drop table no_such_table"]
+["create table u(a unique); insert into u values(1); insert into u values(1)"]
+["create table nn(a not null); insert into nn values(null)"]
+["create table ck(a check(a > 0)); insert into ck values(-1)"]
+["create table st(a int) strict; insert into st values(1.5)"]
+["pragma foreign_keys=on; create table p(i integer primary key); create table c(r references p(i)); insert into c values(9)"]
+["select 1/0, 1%0"]
+
+# --- DML and row counts ---
+["create table t(a); insert into t values(1)"]
+["create table t(a); insert into t values(1),(2),(3)"]
+["create table t(a); insert into t values(1),(2),(3); update t set a=a+1"]
+["create table t(a); insert into t values(1),(2),(3); delete from t where a>1"]
+["create table t(a); insert into t values(1) returning a"]
+["create table t(a); insert into t values(1),(2) returning a, a*10"]
+["create table t(a integer primary key, b); insert into t values(1,'x'); insert into t values(1,'y') on conflict(a) do update set b='z'; select * from t"]
+["create table t(a); with recursive s(v) as (select 1 union all select v+1 from s where v<5) insert into t select v from s; select count(*) from t"]
+["create table t(a); insert into t values(1); select last_insert_rowid(), changes(), total_changes()"]
+
+# --- DDL renders empty, deliberately: sqlite has no command tag ---
+["create table t(a)"]
+["create table t(a); create index ix on t(a)"]
+["create table t(a); drop table t"]
+["create view v as select 1"]
+["create table t(a); create trigger tr after insert on t begin update t set a=0; end"]
+
+# --- batch and statement boundaries ---
+[""]
+["   "]
+["-- nothing at all"]
+["/* block comment only */"]
+["select 1;"]
+["select 1;;"]
+["select 'semi;colon in string'"]
+["select 1 -- trailing comment"]
+["select 1; select 2; select 3"]
+["create table t(a); insert into t values(1); slect 2; insert into t values(2)"]
+["create table t(a)","insert into t values(1)","select * from t"]
+["select 1","slect 2","select 3"]
+["","select 1",""]
+
+# --- transactions ---
+["create table t(a); begin; insert into t values(1); rollback; select count(*) from t"]
+["create table t(a); begin; insert into t values(1); commit; select count(*) from t"]
+["create table t(a); savepoint s; insert into t values(1); rollback to s; select count(*) from t"]
+["commit"]
+["rollback"]
+
+# --- queries ---
+["with c(x) as (select 1 union all select 2) select sum(x) from c"]
+["with recursive n(i) as (select 1 union all select i+1 from n where i<5) select group_concat(i) from n"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<3) select v, row_number() over (order by v), sum(v) over () from s order by v"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<4) select v, rank() over (order by v/2) from s order by v"]
+["create table t(g,v); insert into t values('a',1),('a',2),('b',3); select g, count(*), sum(v) from t group by g having sum(v)>1 order by g"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<5) select distinct v%2 from s order by 1"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<10) select v from s order by v desc limit 3 offset 2"]
+["select case when 1 then 'yes' else 'no' end, coalesce(null,2), ifnull(null,'d'), nullif(1,1)"]
+["select exists(select 1), (select 1 where 0) is null"]
+["select 1 where 0"]
+
+# --- functions ---
+["select ceil(1.2), floor(-1.2), pow(2,10), sqrt(16), log(100), exp(0), pi()"]
+["select abs(-3), round(2.345,2), min(1,2), max(1,2), sign(-5)"]
+["select length('abc'), substr('abcdef',2,3), instr('abcdef','cd'), replace('aaa','a','b')"]
+["select trim('  x  '), ltrim('xxay','x'), rtrim('yaxx','x'), upper('a'), lower('B')"]
+["select printf('%05.2f|%s|%d', 1.5, 'x', 42), format('%s', 'y'), quote('a''b')"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<3) select group_concat(v), group_concat(v,'-') from s"]
+["select concat('a',1,null,'b'), concat_ws('-','a','b',null,'c')"]
+["select 'abc' like 'A%', 'abc' glob 'a*', 'ABC' like 'abc'"]
+["create table t(a collate nocase); insert into t values('ABC'); select count(*) from t where a='abc'"]
+["select date('2020-06-15'), time('12:34:56'), datetime('2020-06-15 12:34:56')"]
+["select strftime('%Y-%m-%d %H:%M:%S','2020-06-15 12:34:56'), julianday('2020-06-15')"]
+["select date('2020-06-15','+1 month','-3 days'), strftime('%w %j','2020-06-15')"]
+["select unixepoch('2020-06-15 00:00:00'), datetime(1592179200,'unixepoch')"]
+
+# --- json ---
+["select json_object('a',1,'b','x')"]
+["select json_array(1,'a',null,2.5)"]
+["select json_extract('{\"a\":{\"b\":42}}','$.a.b')"]
+["select '{\"a\":1}' -> '$.a', '{\"a\":1}' ->> '$.a'"]
+["select json_valid('{}'), json_valid('{'), json_type('[1]'), json_array_length('[1,2,3]')"]
+["select key, value from json_each('{\"x\":1,\"y\":2}') order by key"]
+["select json_insert('{\"a\":1}','$.b',2), json_remove('{\"a\":1,\"b\":2}','$.b'), json_patch('{\"a\":1}','{\"b\":2}')"]
+["select typeof(jsonb('{\"a\":1}')), json(jsonb('{\"a\":1}'))"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<2) select json_group_array(v), json_group_object('k'||v, v) from s"]
+
+# --- schema-shaped features ---
+["create table g(a int, b int generated always as (a*2) stored); insert into g(a) values(3); select * from g"]
+["create table g(a int, b int generated always as (a*2)); insert into g(a) values(3); select * from g"]
+["create table s(a int, b text) strict; insert into s values(1,'x'); select * from s"]
+["create table w(a) without rowid"]
+["create table p(i integer primary key autoincrement, v); insert into p(v) values('a'),('b'); select * from p order by i"]
+["create table t(a); pragma table_info(t)"]
+["pragma table_list"]
+
+# --- virtual tables: row counts include the shadow-table writes total_changes() sees ---
+["create virtual table f using fts5(b); insert into f values('hello world'); select * from f where f match 'hello'"]
+["create virtual table f using fts5(b); insert into f values('a b c'); select highlight(f,0,'<','>') from f where f match 'b'"]
+["create virtual table r using rtree(id, minx, maxx); insert into r values(1,0.0,1.0); select * from r where maxx>0.5"]
+["with recursive s(v) as (select 1 union all select v+1 from s where v<3) select v from s order by v"]

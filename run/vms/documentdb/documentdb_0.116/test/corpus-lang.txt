@@ -1,0 +1,33 @@
+# nothing volatile: every document names its own _id, and no Date(), ISODate(), $$NOW,
+# db.version() or buildInfo
+
+# --- the shape of the thing: write through one surface, read through the other
+["select insert_one('test','m_sql2mongo','{\"_id\":1,\"a\":2}')",["db.m_sql2mongo.find()","mongosh"]]
+[["db.m_mongo2sql.insertOne({_id:1,a:2})","mongosh"],"set documentdb_core.bsonUseEJson=on","select document from collection('test','m_mongo2sql')"]
+
+# --- ordinary CRUD, entirely within mongosh
+[["db.m_crud.insertOne({_id:1,name:'a'}); db.m_crud.find()","mongosh"]]
+[["db.m_many.insertMany([{_id:1,g:'x'},{_id:2,g:'y'},{_id:3,g:'x'}]); db.m_many.countDocuments()","mongosh"]]
+[["db.m_upd.insertOne({_id:1,n:1}); db.m_upd.updateOne({_id:1},{$set:{n:2}}); db.m_upd.find()","mongosh"]]
+[["db.m_del.insertMany([{_id:1},{_id:2}]); db.m_del.deleteOne({_id:1}); db.m_del.find()","mongosh"]]
+[["db.m_sort.insertMany([{_id:3},{_id:1},{_id:2}]); db.m_sort.find().sort({_id:1}).limit(2)","mongosh"]]
+[["db.m_agg.insertMany([{_id:1,g:'x'},{_id:2,g:'x'},{_id:3,g:'y'}]); db.m_agg.aggregate([{$group:{_id:'$g',n:{$sum:1}}},{$sort:{_id:1}}])","mongosh"]]
+
+# --- the REPL properties the runner depends on: every statement echoes, and an error
+#     does not stop the batch
+[["1 + 1\n2 + 2\n3 + 3","mongosh"]]
+[["nosuchthing()\n'still running'","mongosh"]]
+[["db.m_err.insertOne({_id:1}); db.m_err.insertOne({_id:1})","mongosh"]]
+
+# --- batches share the guest but never an interpreter
+[["var x = 41; x + 1","mongosh"],["typeof x","mongosh"]]
+[["db.m_state.insertOne({_id:1})","mongosh"],["db.m_state.countDocuments()","mongosh"]]
+
+# --- output that the prompt stripper must not damage
+[["print('[direct: not a prompt]')","mongosh"]]
+[["print(JSON.stringify([{note:'a ] b > c'}]))","mongosh"]]
+[["print('naïve ☃ 日本語')","mongosh"]]
+[["print('```fenced```')","mongosh"]]
+
+# --- unknown language is fenced, not fatal
+[["select 1","nosuchlang"],"select 1"]

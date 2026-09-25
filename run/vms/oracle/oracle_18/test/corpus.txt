@@ -1,0 +1,70 @@
+# nothing volatile: no sysdate, systimestamp, dbms_random, sys_guid or rowid
+
+# basic shapes, NUMBER right-alignment, NULL rendering
+["select 1 from dual"]
+["select 1 n, 'a' s from dual"]
+["select cast(null as number) n, cast(null as varchar2(10)) v from dual"]
+
+# RAW -> 0xHEX, and the LOB family (CLOB / NCLOB / BLOB, incl. multiline and 4000-char)
+["select hextoraw('DEADBEEF') r from dual"]
+["select utl_raw.cast_to_raw('AB') r from dual"]
+["select to_clob('hello clob') c from dual"]
+["select to_clob('a'||chr(10)||'b') c from dual"]
+["select to_clob(rpad('x',4000,'x')) c from dual"]
+["select to_nclob('nclob text') n from dual"]
+["select to_blob(hextoraw('414243')) b from dual"]
+
+# error rendering: missing object, syntax, runtime, PL/SQL raise
+["select * from no_such_table"]
+["select from"]
+["select 1/0 from dual"]
+["begin raise_application_error(-20001,'custom message'); end;"]
+
+# DML row counts and multi-batch state (each batch shares one session)
+["create table t(a number)","insert into t values(1)","insert into t select 2 from dual union all select 3 from dual","update t set a=a+10","select * from t order by a","delete from t"]
+
+# dbms_output capture, including the "no output" and trailing-/ cases. End a block with
+# `/`: without one the runner strips its final `;`, and `begin ... end` is PLS-00103
+["begin dbms_output.put_line('hello'); dbms_output.put_line('world'); end;"]
+["begin dbms_output.put_line('single'); end;\n/"]
+["begin if 1=2 then dbms_output.put_line('never'); end if; end;"]
+["declare x number; begin x:=1; end;"]
+
+# markdown escaping: pipes/asterisks/backticks, newlines, leading spaces, unicode
+["select '|pipe *star _under `tick <lt &amp [brack /slash' s from dual"]
+["select 'line1'||chr(10)||'  indented' s from dual"]
+["select ' leading space' s from dual"]
+["select '\\\"' bq, '\\\\' bb, 'a\\b' ab, 'a'||chr(9)||'b' tab from dual"]
+["select 'trailing backtick ```' s from dual"]
+["select 'héllo wörld ☃' u from dual"]
+
+# date / timestamp / interval / binary float / NUMBER precision
+["select date '2020-01-01' d from dual"]
+["select timestamp '2020-01-01 12:34:56.789' t from dual"]
+["select interval '2' year y, interval '2 3:4:5.6' day to second ds from dual"]
+["select cast(1.5 as binary_double) bd, cast(1.5 as binary_float) bf from dual"]
+["select 1.23456789012345678901234567890 n from dual"]
+["select -0.000000001 n from dual"]
+
+# 23c+ and exotic types: json, xmltype, boolean, named collection (needs OCI_OBJECT)
+["select json_object('a' value 1) j from dual"]
+["select xmlelement(\"a\",1) x from dual"]
+["select true b from dual"]
+["select cast(collect(level) as sys.odcinumberlist) c from dual connect by level<=3"]
+
+# result-set edge cases: empty set, nulls in a column, long column name, wide value
+["select level lvl from dual connect by level<=5"]
+["select * from dual where 1=0"]
+["select 'a' s from dual union all select null from dual"]
+["select 1 as this_is_a_very_long_column_name_x from dual"]
+["select rpad('x',100,'x') s from dual"]
+
+# statement trimming: trailing ';', repeated ';', trailing whitespace, empty batch
+["select 1 from dual;"]
+["select 1 from dual;;;"]
+["select 1 from dual   "]
+[""]
+["   "]
+
+# multi-batch where the middle batch fails - later batches must still run
+["select 1 a from dual","select from","select 2 b from dual"]

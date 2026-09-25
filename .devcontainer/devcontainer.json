@@ -8,7 +8,7 @@
 
   "customizations": {
     "zed": {
-      "extensions": ["sql", "dockerfile", "html"]
+      "extensions": ["sql", "dockerfile", "html", "php"]
     }
   },
 

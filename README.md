@@ -43,4 +43,4 @@ Static assets are content-hashed at build time. `scripts/cdn.sh` writes `layer/s
 
 ## Back end
 
-For now this repo contains the code for the front end and fiddle database, not the back-end engines. I intend to add all of those once I clean up the code. The plan is to include a cloudformation script that will spin up a bare metal EC2 running firecracker. You would never run like this due to cost but it's a good way of documenting the setup, so you know you can set up your own back end server if you need to.
+Every engine version runs in a Firecracker microVM (see [`run/`](run)) restored from a snapshot for each fiddle. [`run/cumbria.md`](run/cumbria.md) is a rough and ready guide to setting up the host.

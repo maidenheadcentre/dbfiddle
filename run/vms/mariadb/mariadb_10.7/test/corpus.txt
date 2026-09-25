@@ -1,0 +1,181 @@
+# nothing volatile: no rand, random_bytes, uuid, uuid_v4, sys_guid, now, sysdate,
+# current_timestamp or connection_id. uuid_short() stays out too: it is frozen, so it would pass.
+
+# basic shapes, numeric right-alignment vs string left-alignment, NULL rendering
+["select 1"]
+["select 1 n, 'a' s"]
+["select cast(null as signed) n, cast(null as char(10)) v"]
+["select 'a' s union all select null"]
+
+# integer / decimal / float / double / unsigned - all right-aligned by align_right()
+["select cast(1 as signed) i, cast(1 as unsigned) u, 1.5 d, cast(1.5 as double) f"]
+["select 18446744073709551615 big, -9223372036854775808 small"]
+["select 1.23456789012345678901234567890 n"]
+["select -0.000000001 n, 0.0 z"]
+["select 1/0 divzero, 1 div 0 intdiv"]
+
+# binary rendering
+["select unhex('DEADBEEF') vb"]
+["select cast('AB' as binary) b"]
+["select char(255) c255"]
+["select aes_encrypt('a','k') enc"]
+["create table t(b blob, tb text)","insert into t values(unhex('414243'),'plain')","select b, tb from t"]
+["create table t(b blob)","insert into t values(unhex('00FF10DEADBEEF'))","select b from t"]
+["create table t(b varbinary(8))","insert into t values(unhex('0102'))","select b from t"]
+["create table t(b varbinary(8))","insert into t values('ABC')","select b from t"]
+# the decision is per COLUMN, not per row: one unreadable value must hex both rows
+["create table t(b varbinary(8))","insert into t values('ABC'),(unhex('01'))","select b from t order by b"]
+["create table t(x text collate utf8mb4_bin)","insert into t values('readable')","select x from t"]
+["create table t(g geometry)","insert into t values(st_geomfromtext('POINT(1 2)'))","select g from t"]
+["select st_geomfromtext('POINT(1 2)') g"]
+# binary charset that reads as text, so NOT hexed - the char()/concat() idiom
+["select concat('a',char(10),'b') twoline, char(9) tab"]
+# a text value that LOOKS like a hexed cell - its backticks must come back escaped
+["select '`0x0102`' faux, '0x0102' bare"]
+# a long blob: 2000 bytes -> a 4000-character code span
+["create table t(b blob)","insert into t values(unhex(repeat('41',2000)))","select b from t"]
+
+# bit: MSB-first at the DECLARED width, not the byte count, so the non-byte-aligned
+# widths are the cases that prove the width is tracked
+["create table t(b bit(8))","insert into t values(b'10101010')","select b, b+0 from t"]
+["create table t(b bit(1))","insert into t values(b'1')","select b from t"]
+["create table t(b bit(3))","insert into t values(b'101')","select b from t"]
+["create table t(b bit(3))","insert into t values(b'0')","select b from t"]
+["create table t(b bit(17))","insert into t values(b'10000000000000001')","select b from t"]
+["create table t(b bit(64))","insert into t values(b'1111111111111111111111111111111111111111111111111111111111111111')","select b from t"]
+
+# MariaDB-only types
+["create table t(j json)","insert into t values('{\"k\":[1,2]}')","select j from t"]
+["select inet6_ntoa(inet6_aton('2001:db8::1')) txt, inet6_aton('::1') bin"]
+
+# temporal and exotic types, all with literal values
+["select date '2020-01-01' d, time '12:34:56' t, timestamp '2020-01-01 12:34:56' ts"]
+["select cast('2020-01-01 12:34:56.789' as datetime(3)) dt"]
+["select cast(2020 as year) y"]
+["select json_object('a',1,'b',json_array(1,2)) j"]
+["create table t(e enum('x','y'), s set('p','q'))","insert into t values('y','p,q')","select e, s from t"]
+["create table t(b bit(8))","insert into t values(b'10101010')","select b, b+0 from t"]
+["select st_astext(st_geomfromtext('POINT(1 2)')) g"]
+["select cast('{\"k\":[1,2]}' as json) j"]
+
+# error rendering: unknown table, syntax, runtime, explicit SIGNAL, duplicate key,
+# and the result-stage error path (recursion limit) that is captured after the loop
+["select * from no_such_table"]
+["select from"]
+["select cast('x' as decimal) from dual where 1=1 and unknown_col=1"]
+["signal sqlstate '45000' set message_text='custom message'"]
+["create table t(a int primary key)","insert into t values(1)","insert into t values(1)"]
+["with recursive c as (select 1 n union all select n+1 from c where n<10000) select count(*) from c"]
+["select json_extract('not json','$.a')"]
+
+# DML row counts / mysql_info() status fences: multi-row insert, update, alter
+["create table t(a int)","insert into t values(1),(2),(3)","update t set a=a+10","select * from t order by a","delete from t"]
+["create table t(a int)","insert into t values(1),(2)","alter table t add column b int"]
+["create table t(a int)","insert into t values(1),(2),(3)","update t set a=a where a>1"]
+["create table t(a int)","insert ignore into t values(1),(1)"]
+
+# CLIENT_MULTI_STATEMENTS: several statements inside ONE batch string
+["select 1 a; select 2 b"]
+["create table t(a int); insert into t values(9); select * from t"]
+["select 1 a; select from; select 2 b"]
+
+# markdown escaping: every character md_cell() backslash-escapes, plus <br> and &numsp;
+["select '|pipe *star _under `tick <lt &amp [brack /slash' s"]
+["select concat('line1',char(10),'  indented') s"]
+["select ' leading space' s"]
+["select '\\\\\"' bq, '\\\\\\\\' bb, 'a\\\\b' ab"]
+["select 'trailing backtick ```' s"]
+["select concat('a',char(13),char(10),'b') crlf, concat('c',char(13),'d') cr"]
+["select '*' a, '|' b, '`' c, '_' d, '<' e, '&' f, '[' g, '/' h"]
+
+# unicode: BMP, 4-byte emoji (utf8mb4), and invalid UTF-8 -> U+FFFD in json_emit_string
+["select 'héllo wörld ☃' u"]
+["select '😀 🌍' emoji"]
+["select _utf8mb4 0xF09F9880 e"]
+["select cast(unhex('C3') as char) bad"]
+["select char(0) nul, concat('a',char(9),'b') tab"]
+
+# result-set edge cases: empty set, long column name, wide value, many rows
+["select 1 where 1=0"]
+["select 1 as this_is_a_very_long_column_name_x"]
+["select repeat('x',100) s"]
+["select repeat('x',4000) s"]
+["with recursive c as (select 1 n union all select n+1 from c where n<20) select n from c"]
+["select 1 as `col with |pipe`, 2 as `col with space`"]
+
+# statement trimming: trailing ';', repeated ';', trailing whitespace, empty batch
+["select 1;"]
+["select 1;;;"]
+["select 1   "]
+["   "]
+
+# multi-batch where the middle batch fails - later batches must still run
+["select 1 a","select from","select 2 b"]
+["create table t(a int)","insert into t values(1)","select * from no_such_table","select * from t"]
+
+# server/session state that is stable across restores (NOT volatile)
+["select version()"]
+["select @@character_set_client cs, @@collation_connection coll"]
+["select database() db, current_user() u"]
+["select @@sql_mode"]
+["select @@cte_max_recursion_depth, @@max_allowed_packet"]
+
+# ===========================================================================
+# MariaDB-specific block
+# ===========================================================================
+
+# the empty query: deterministic on MariaDB, unlike mysql
+[""]
+
+# SEQUENCE objects - a MariaDB feature MySQL has no equivalent of at all
+["create sequence s start with 5 increment by 5","select nextval(s), nextval(s)","select next_not_cached_value from s"]
+
+# RETURNING on INSERT and DELETE (10.5+), which renders as a table and not a status fence
+["create table t(a int)","insert into t values(1),(2) returning a"]
+["create table t(a int primary key)","insert into t values(1),(2)","delete from t where a=1 returning a"]
+
+# VECTOR columns and distance functions (11.7+)
+["create table v(id int primary key, e vector(3) not null)","insert into v values(1,vec_fromtext('[1,2,3]')),(2,vec_fromtext('[4,5,6]'))","select id, vec_totext(e) t, vec_distance_euclidean(e, vec_fromtext('[0,0,0]')) d from v order by id"]
+
+# types MySQL does not have: INET6/INET4 (10.5/10.10) and UUID (10.7)
+["create table t(a inet6, b inet4)","insert into t values('2001:db8::1','10.0.0.1')","select * from t"]
+["create table t(u uuid)","insert into t values('123e4567-e89b-12d3-a456-426614174000')","select u from t"]
+
+# generated columns (MariaDB spells the stored kind PERSISTENT) and invisible columns
+["create table t(a int, b int as (a*2) virtual, c int as (a+1) persistent)","insert into t(a) values(3)","select * from t"]
+["create table t(a int, b int invisible default 7)","insert into t(a) values(1)","select * from t","select a,b from t"]
+
+# CHECK constraint violation - an error class the shared block does not cover
+["create table t(a int check (a > 0))","insert into t values(1)","insert into t values(-1)"]
+
+# Oracle-compatibility functions available in the default sql_mode
+["select nvl(null,'d') n, decode(1,1,'one','other') d"]
+
+# set operations and window functions
+["select 1 a union all select 2 order by 1 desc"]
+["select 1 intersect select 1","select 1 except select 2"]
+["select row_number() over (order by n) rn, n from (select 1 n union all select 2) x"]
+
+# the Aria storage engine, and information_schema agreeing about it
+["create table t(a int) engine=aria","insert into t values(1)","select * from t","select engine from information_schema.tables where table_schema='fiddle' and table_name='t'"]
+
+# JSON: MariaDB's json_value/json_query and json_table
+["select json_value('{\"a\":[1,2]}','$.a[1]') v, json_query('{\"a\":[1,2]}','$.a') q"]
+["select * from json_table('[{\"a\":1},{\"a\":2}]', '$[*]' columns(a int path '$.a')) jt"]
+
+# arithmetic edge cases and regexp (MariaDB uses PCRE where MySQL uses ICU)
+["select 1 div 0 a, 1 % 0 b, pow(2,10) c"]
+["select regexp_replace('abc123','[0-9]+','#') r, regexp_instr('abc','b') i"]
+
+# user variables across batches in one session, and date arithmetic
+["select @x := 5 a","select @x b"]
+["select cast('2020-01-31' as date) + interval 1 month d, timestampdiff(day, '2020-01-01', '2020-03-01') n"]
+
+# DDL that returns a multi-column table (SHOW CREATE) and an instant ALTER
+["create table t(a int)","alter table t add column b int, algorithm=instant","show create table t"]
+
+# a stable information_schema query - catalog shape, not server state
+["select column_name, data_type from information_schema.columns where table_schema='information_schema' and table_name='ENGINES' order by ordinal_position"]
+
+# four kinds of failure in one fiddle, with later batches still running
+["select * from no_such_schema.t","select foo(1)","create table t(a int)","create table t(a int)"]

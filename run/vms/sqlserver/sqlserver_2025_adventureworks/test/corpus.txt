@@ -1,0 +1,146 @@
+# EXCLUDED DELIBERATELY:
+#   @@version, serverproperty('ProductVersion'/'ProductLevel')  - differ after any rebuild
+#   getdate(), sysdatetime(), newid(), rand(), crypt_gen_random
+#   db_name(), user_name(), suser_sname(), original_login(), @@spid
+#   any error whose text embeds the database name, such as the 2019+ string-truncation message
+#   auto-generated constraint names (PK__t__<hash>) - every constraint below is named
+
+# --- integers and alignment (NumericTypes -> right-aligned separator row) ---
+["select 1"]
+["select 1 as i"]
+["select cast(1 as bigint) as b, cast(2 as smallint) as s, cast(3 as tinyint) as t"]
+["select cast(1 as bit) as b1, cast(0 as bit) as b0"]
+["select -2147483648 as lo, 2147483647 as hi"]
+["select cast(9223372036854775807 as bigint) as big"]
+["select 1 as a, null as b, 'x' as c"]
+["select 1 where 1 = 0"]
+
+# --- floating point: fiddle.cs pins float to G15 and real to G7 ---
+["select cast(1.5 as float) as f, cast(1.5 as real) as r"]
+["select cast(1.0 / 3 as float) as f"]
+["select cast(1.0 / 3 as real) as r"]
+["select cast(0.1 as float) + cast(0.2 as float) as f"]
+["select cast(1e-8 as float) as f, cast(1e20 as float) as g"]
+["select sqrt(cast(2 as float)) as f"]
+
+# --- decimal / numeric / money: decimal goes through GetSqlDecimal ---
+["select cast(123.456 as decimal(10,3)) as d, cast(123.456 as numeric(10,3)) as n"]
+["select cast(1 as decimal(38,0)) * 12345678901234567890 as d"]
+["select cast(1.10 as decimal(10,2)) as d"]
+["select cast(1 as money) as m, cast(1 as smallmoney) as sm"]
+["select cast(1234.5678 as money) as m"]
+["select cast(10 as decimal(5,2)) / 3 as d"]
+
+# --- strings, markdown escaping, unicode ---
+["select 'plain' as s"]
+["select '[*/|`_<&]' as s"]
+["select '\\\"' bq, '\\\\' bb, 'a\\b' ab"]
+["select '>gt not escaped<' as s"]
+["select '  leading spaces' as s"]
+["select space(3) + 'x' as s"]
+["select 'a' + char(9) + 'tab' as s"]
+["select 'line1' + char(10) + 'line2' as s"]
+["select 'line1' + char(13) + 'line2' as s"]
+["select 'line1' + char(13) + char(10) + '  line2' as s"]
+["select N'héllo wörld' as s"]
+["select N'日本語' as s"]
+["select N'😀 emoji' as s"]
+["select '' as empty_string"]
+["select cast(null as varchar(10)) as n"]
+["select replicate('a', 100) as s"]
+["select cast('a' as char(10)) as c, len(cast('a' as char(10))) as l"]
+["select '```' as s"]
+["select 1 as [a|b*c]"]
+["select 1 as [ leading]"]
+["select 'a' as [日本], 2 as [x_y]"]
+
+# --- binary and uniqueidentifier ---
+["select cast(0xDEADBEEF as varbinary(8)) as v"]
+["select cast(0x00 as binary(4)) as b"]
+["select cast('abc' as varbinary(10)) as v"]
+["select cast(0x as varbinary(10)) as v"]
+["select convert(uniqueidentifier, '00000000-0000-0000-0000-000000000001') as g"]
+["select cast(null as varbinary(4)) as v"]
+
+# --- date and time, incl. the precisionFormat scale rules ---
+["select cast('2020-06-15' as date) as d"]
+["select cast('2020-06-15 13:45' as smalldatetime) as sd"]
+["select cast('2020-06-15 13:45:56.789' as datetime) as dt"]
+["select cast('2020-06-15 13:45:56.1234567' as datetime2(7)) as dt2"]
+["select cast('2020-06-15 13:45:56.123' as datetime2(3)) as dt2"]
+["select cast('2020-06-15 13:45:56' as datetime2(0)) as dt2"]
+["select cast('13:45:56.1234567' as time(7)) as t"]
+["select cast('13:45:56' as time(0)) as t"]
+["select cast('2020-06-15 13:45:56.1234567 +05:30' as datetimeoffset(7)) as dto"]
+["select cast('2020-06-15 13:45:56 -08:00' as datetimeoffset(0)) as dto"]
+["select datediff(day, '2020-01-01', '2021-01-01') as d"]
+["select dateadd(month, 1, cast('2020-01-31' as date)) as d"]
+["select convert(varchar(30), cast('2020-06-15 13:45:00' as datetime), 100) as c"]
+["select convert(varchar(30), cast('2020-06-15 13:45:00' as datetime), 113) as c"]
+["select datename(month, cast('2020-06-15' as date)) as m, datename(weekday, cast('2020-06-15' as date)) as w"]
+
+# --- xml (PrettyXml), sql_variant, json ---
+["select cast('<a><b>1</b><c d=\"2\"/></a>' as xml) as x"]
+["select cast('<r><i>1</i><i>2</i></r>' as xml) as x"]
+["select (select 1 as a, 'b' as b for xml path('row'), type) as x"]
+["select cast(1 as sql_variant) as v, cast('s' as sql_variant) as w"]
+["select isjson('{\"a\":1}') as j"]
+["select json_value('{\"a\":1,\"b\":\"x\"}', '$.b') as j"]
+
+# --- CLR UDTs: the dotMorten cross-platform port has to match Windows ToString() ---
+["select geometry::STGeomFromText('POINT(1 2)', 0) as g"]
+["select geometry::STGeomFromText('LINESTRING(0 0, 1 1, 2 4)', 0).STLength() as len"]
+["select geography::STGeomFromText('POINT(-1.2 51.5)', 4326) as g"]
+["select geography::STGeomFromText('POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))', 4326).STArea() as a"]
+["select hierarchyid::Parse('/1/2/') as h"]
+["select hierarchyid::GetRoot().ToString() as h"]
+
+# --- DDL / DML / rows-affected / multiple result sets ---
+["create table t(a int)"]
+["create table t(a int); insert t values (1),(2),(3); select * from t order by a"]
+["create table t(a int); insert t values (1); update t set a = 2; delete from t"]
+["create table t(a int)", "insert t values(1),(2)", "select * from t order by a"]
+["declare @t table(a int); insert @t values(1),(2); select count(*) as c from @t"]
+["select * from (values(1),(2),(3)) v(a) order by a"]
+["select 1 as a; select 2 as b"]
+["select 1 as a select 2 as b"]
+["create table t(a int); insert t values(1),(2); select * from t order by a; select count(*) as c from t"]
+["set nocount on; create table t(a int); insert t values(1); select * from t"]
+["with c as (select 1 as a union all select 2) select a, sum(a) over () as s from c order by a"]
+
+# --- messages: print / raiserror severity 0 land in the status fence ---
+["print 'hello'"]
+["print 'a' print 'b'"]
+["raiserror('informational', 0, 1)"]
+["print '```'"]
+["print 'multi' + char(10) + 'line'"]
+["create table t(a int); insert t values(1); print 'after insert'; select * from t"]
+
+# --- errors ---
+["select * from no_such_table"]
+["select no_such_column from (select 1 as a) t"]
+["selec 1"]
+["select 1/0"]
+["select cast(2147483647 as int) + 1"]
+["select cast('abc' as int)"]
+["select convert(datetime, '2020-13-01')"]
+["raiserror('custom error', 16, 1)"]
+["create table t(a int constraint pk_t primary key); insert t values(1); insert t values(1)"]
+["create table t(a int constraint ck_t check (a > 0)); insert t values(-1)"]
+["create table t(a int not null); insert t values(null)"]
+["select 1", "select * from no_such_table", "select 2"]
+["select 1; select * from no_such_table; select 2"]
+["create table t(a int); insert t values(1); select * from t order by a; select 1/0"]
+["execute no_such_proc"]
+["drop table no_such_table"]
+
+# --- empty and blank batches, trailing semicolons ---
+[""]
+["   "]
+["\n"]
+["select 1;"]
+["select 1 ", " select 2"]
+
+# --- sa capability ---
+["select is_srvrolemember('sysadmin') as sysadmin"]
+["select count(*) as c from sys.dm_os_sys_info"]

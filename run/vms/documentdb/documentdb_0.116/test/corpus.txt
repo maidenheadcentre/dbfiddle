@@ -1,0 +1,34 @@
+# nothing volatile: every document names its own _id, and no random(), gen_random_uuid(),
+# now(), clock_timestamp(), txid_current(), pg_backend_pid(), version() or extversion
+
+# --- the CRUD surface, unqualified: documentdb_api is on the runner's search_path
+["select insert_one('test','c_ins','{\"_id\":1,\"a\":2}')"]
+["select insert_one('test','c_dup','{\"_id\":1}')","select insert_one('test','c_dup','{\"_id\":1}')"]
+["select insert_one('test','c_bad','{not json}')"]
+
+# --- reading documents back as a table, in both renderings
+["select insert_one('test','c_hex','{\"_id\":1,\"s\":\"x\"}')","select document from collection('test','c_hex')"]
+["select insert_one('test','c_ej','{\"_id\":1,\"s\":\"x\"}')","set documentdb_core.bsonUseEJson=on","select document from collection('test','c_ej')"]
+
+# --- bson type rendering: the extended-json shapes are the thing being pinned here
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_types','{\"_id\":1,\"i\":7,\"d\":1.5,\"b\":true,\"n\":null,\"arr\":[1,2],\"sub\":{\"k\":\"v\"}}')","select document from collection('test','c_types')"]
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_utf8','{\"_id\":1,\"s\":\"naïve ☃ 日本語\"}')","select document from collection('test','c_utf8')"]
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_esc','{\"_id\":1,\"s\":\"a\\\"b\\\\c\"}')","select document from collection('test','c_esc')"]
+
+# --- the mongo command surface reached through SQL
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_find','{\"_id\":1,\"g\":\"x\"}')","select insert_one('test','c_find','{\"_id\":2,\"g\":\"y\"}')","select cursorpage from find_cursor_first_page('test','{\"find\":\"c_find\",\"filter\":{\"g\":\"x\"}}')"]
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_agg','{\"_id\":1,\"g\":\"x\"}')","select insert_one('test','c_agg','{\"_id\":2,\"g\":\"x\"}')","select cursorpage from aggregate_cursor_first_page('test','{\"aggregate\":\"c_agg\",\"pipeline\":[{\"$group\":{\"_id\":\"$g\",\"n\":{\"$sum\":1}}}],\"cursor\":{}}')"]
+["set documentdb_core.bsonUseEJson=on","select insert_one('test','c_cnt','{\"_id\":1}')","select document from count_query('test','{\"count\":\"c_cnt\"}')"]
+
+# --- errors the runner has to fence rather than swallow
+["select insert_one('test','c_nodb')","select 1"]
+["select nosuchfunction(1)"]
+["select create_collection('test','c_twice')","select create_collection('test','c_twice')"]
+
+# --- documentdb_api is on the path but documentdb_api_catalog deliberately is not
+["select insert_one('test','c_qual','{\"_id\":1}')","select documentdb_api.insert_one('test','c_qual','{\"_id\":2}')"]
+
+# --- plain postgres still behaves like the rest of the family
+["select 1 as n, 'x' as s"]
+["select * from (values (1,'a'),(2,'b')) v(n,s) order by n"]
+["create table t(i int primary key)","insert into t values (1),(2)","select * from t order by i"]

@@ -1,0 +1,39 @@
+# nothing volatile: no getdate(), and no ordering without an ORDER BY
+
+# --- headline row counts ---
+["select count(*) as c from Person.Person"]
+["select count(*) as c from Person.Address"]
+["select count(*) as c from Sales.SalesOrderHeader"]
+["select count(*) as c from Sales.SalesOrderDetail"]
+["select count(*) as c from Production.Product"]
+["select count(*) as c from Production.TransactionHistory"]
+["select count(*) as c from HumanResources.Employee"]
+["select count(*) as c from Purchasing.PurchaseOrderDetail"]
+["select count(*) as t from sys.tables"]
+["select count(*) as v from sys.views, sys.objects where 1=0 union all select count(*) from sys.views"]
+
+# --- content, by primary key so ordering cannot matter ---
+["select FirstName, MiddleName, LastName, PersonType from Person.Person where BusinessEntityID = 1"]
+["select Name, ProductNumber, Color, ListPrice, SafetyStockLevel from Production.Product where ProductID = 707"]
+["select SalesOrderID, OrderDate, DueDate, SubTotal, TaxAmt, Freight, TotalDue from Sales.SalesOrderHeader where SalesOrderID = 43659"]
+["select AddressLine1, City, PostalCode from Person.Address where AddressID = 1"]
+["select JobTitle, BirthDate, MaritalStatus, Gender, VacationHours from HumanResources.Employee where BusinessEntityID = 1"]
+
+# --- aggregates and a join: sensitive to any row-level difference ---
+["select sum(TotalDue) as total, count(*) as orders from Sales.SalesOrderHeader"]
+["select checksum_agg(checksum(ProductID, Name, ProductNumber)) as chk from Production.Product"]
+["select top 5 p.Name, sum(sod.OrderQty) as qty from Sales.SalesOrderDetail sod join Production.Product p on p.ProductID = sod.ProductID group by p.Name order by qty desc, p.Name"]
+["select c.Name as category, count(*) as products from Production.Product p join Production.ProductSubcategory s on s.ProductSubcategoryID = p.ProductSubcategoryID join Production.ProductCategory c on c.ProductCategoryID = s.ProductCategoryID group by c.Name order by c.Name"]
+
+# --- the awkward column types the runner has to format from real data ---
+["select SpatialLocation from Person.Address where AddressID = 1"]
+["select OrganizationNode, OrganizationNode.ToString() as path, OrganizationLevel from HumanResources.Employee where BusinessEntityID = 2"]
+["select Demographics from Sales.Store where BusinessEntityID = 292"]
+["select LargePhotoFileName, datalength(LargePhoto) as photo_bytes from Production.ProductPhoto where ProductPhotoID = 70"]
+["select rowguid, ModifiedDate from Production.ProductCategory where ProductCategoryID = 1"]
+
+# --- KNOWN DIFFERENCES: the Linux/Express amendments derive.sh applies ---
+["select count(*) as documents from Production.Document"]
+["select count(*) as productdocuments from Production.ProductDocument"]
+["select count(*) as fulltext_catalogs from sys.fulltext_catalogs"]
+["select case when object_id('dbo.uspSearchCandidateResumes') is null then 'absent' else 'present' end as freetext_proc"]

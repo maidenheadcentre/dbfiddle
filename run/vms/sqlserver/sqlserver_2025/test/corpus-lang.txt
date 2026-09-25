@@ -1,0 +1,35 @@
+# nothing volatile: no random, time, os.environ or pid
+# the traceback case stays a single-batch line: its script path /tmp/batch<N>.py names the batch
+
+# --- the language runs at all ---
+[["print(6*7)","python"]]
+
+# --- a string element is still SQL, and elements may be mixed ---
+[["select 1 as sql_pair",""]]
+[["select 1 as first",""],"select 2 as second",["print(3)","python"]]
+["select 1 as plain",["print(2)","python"],"select 3 as plain_again"]
+
+# --- the database is shared through the DSN: SQL creates, the language reads ---
+["select 42 x into t",["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nprint(c.execute('select x from t').fetchone()[0])","python"]]
+["select 42 x into t",["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nprint(c.execute('select sum(x) s from t').fetchall())","python"]]
+[["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nprint(c.execute(\"select cast(1.5 as decimal(3,1)), cast('2024-01-02' as date), N'café'\").fetchone())","python"]]
+
+# --- the language writes: pyodbc's default is not autocommit, so the user commits ---
+["create table t (x int)",["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nc.execute('insert t values (7)')\nc.commit()","python"],"select * from t"]
+["create table t (x int)",["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nc.execute('insert t values (7)')","python"],"select count(*) n from t"]
+["create table t (x int)",["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle', autocommit=True)\nc.execute('insert t values (8)')","python"],"select * from t"]
+
+# --- an engine error reaches the language as pyodbc.Error, SQLSTATE first ---
+[["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\ntry:\n    c.execute('select 1/0')\nexcept pyodbc.Error as e:\n    print(e.args[0])","python"]]
+
+# --- one process per batch: nothing carries over ---
+[["x = 1","python"],["print('x' in dir())","python"]]
+
+# --- stdout is a plain fence and widens past backticks; stderr and a non-zero exit are error fences ---
+[["print('```')","python"]]
+[["import sys\nsys.stderr.write('to stderr\\n')","python"]]
+[["import sys\nsys.exit(3)","python"]]
+[["1/0","python"]]
+
+# --- a language nothing speaks is fenced, not forked ---
+[["console.log(1)","node"]]

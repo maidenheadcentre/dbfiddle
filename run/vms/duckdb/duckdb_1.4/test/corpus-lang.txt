@@ -1,0 +1,57 @@
+# nothing volatile: no random, time, os.environ, process.env or pid; no uncaught node throw,
+# whose stack footer prints node's version; and no path, since /tmp/batch<N> moves with a case
+
+# --- the language runs at all ---
+[["print(6*7)","python"]]
+[["console.log(6*7)","node"]]
+
+# --- a string element is still SQL, and elements may be mixed ---
+[["select 1 as sql_pair",""]]
+[["select 1 as first",""],"select 2 as second",["print(3)","python"]]
+["select 1 as plain",["print(2)","python"],"select 3 as plain_again"]
+
+# --- the database is shared: SQL creates, the language reads ---
+[["create table t as select 42 x",""],["import duckdb\nc = duckdb.connect('/data/fiddle.duckdb')\nprint(c.sql('select * from t'))","python"]]
+[["create table t as select 42 x",""],["import duckdb\nc = duckdb.connect('/data/fiddle.duckdb')\nprint(c.execute('select sum(x) from t').fetchall())","python"]]
+
+# --- the language writes, SQL reads it back ---
+[["create table t (x int)",""],["import duckdb\nc=duckdb.connect('/data/fiddle.duckdb')\nc.execute('insert into t values (7)')\nc.close()","python"],["select * from t",""]]
+[["create table t (x int)",""],["const { DuckDBInstance } = require('@duckdb/node-api');\n(async () => {\n  const i = await DuckDBInstance.create('/data/fiddle.duckdb');\n  const c = await i.connect();\n  await c.run('insert into t values (9)');\n  c.closeSync();\n  i.closeSync();\n})();","node"],["select * from t",""]]
+
+# --- node reads what SQL created, via @duckdb/node-api resolved from /node_modules ---
+[["create table t as select 42 x",""],["const { DuckDBInstance } = require('@duckdb/node-api');\n(async () => {\n  const i = await DuckDBInstance.create('/data/fiddle.duckdb');\n  const c = await i.connect();\n  const r = await c.runAndReadAll('select * from t');\n  console.log(JSON.stringify(r.getRows()));\n})();","node"]]
+[["create table t as select 42 x",""],["const { DuckDBInstance } = require('@duckdb/node-api');\n(async () => {\n  const i = await DuckDBInstance.create('/data/fiddle.duckdb');\n  const c = await i.connect();\n  const r = await c.runAndReadAll('select sum(x) as s from t');\n  console.log(r.getRows()[0][0]);\n})();","node"]]
+
+# --- one process per batch: nothing carries over ---
+[["x = 1","python"],["print('x' in dir())","python"]]
+[["globalThis.y = 1","node"],["console.log(typeof globalThis.y)","node"]]
+
+# --- stdout and stderr render differently; a silent batch renders nothing ---
+[["import sys\nsys.stderr.write('to stderr\\n')","python"]]
+[["print('out')\nimport sys\nsys.stderr.write('err\\n')","python"]]
+[["pass","python"]]
+[["console.error('to stderr')","node"]]
+
+# --- a non-zero exit with no stderr gets "exited with status N" ---
+[["import sys\nsys.exit(3)","python"]]
+[["process.exit(4)","node"]]
+
+# --- an unknown language is fenced, and only its own batch ---
+[["select 1 as before",""],["print(1)","perl"],["select 2 as after",""]]
+[["print(1)","PYTHON"]]
+
+# --- malformed elements fail the payload, as a malformed array always has ---
+[["one","two","three"]]
+[["text",1]]
+[[]]
+
+# --- output shapes through fence_plain: backticks, unicode, multiline, no trailing newline ---
+[["print('```')","python"]]
+[["print('café 日本語 🐦')","python"]]
+[["print('a\\nb\\nc')","python"]]
+[["import sys\nsys.stdout.write('no trailing newline')","python"]]
+[["console.log(JSON.stringify({a:[1,2],b:'x'}))","node"]]
+
+# --- the interpreters are the versions the build pinned, so these are stable ---
+[["import sys\nprint(sys.version_info >= (3,11))","python"]]
+[["console.log(typeof fetch, typeof structuredClone)","node"]]

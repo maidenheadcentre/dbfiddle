@@ -289,6 +289,9 @@ cap.
 - Moving `engine_default_version_code` needs the engine's default fiddle to still run on the
   new version **and** to have been saved against it — run it through `POST /run`, then check
   the homepage link for that engine resolves.
+- **A new version under an engine that carries a sample carries the sample too.** Build
+  `<engine>_<sample>` from that version's own recipe, languages included, and give it its own
+  `allowed` row and default fiddle.
 
 Adding a version under an existing engine code is much cheaper than a new engine code:
 `engine_default` is a column on `engine`, not `version`, so a new version shares the existing

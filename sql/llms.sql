@@ -8,7 +8,7 @@ create function get() returns jsonb as $$
   from ( select engine_code code
               , ( select json_agg(to_jsonb(z)-'ordinal' order by split_part(ordinal,'.',1)::int
                                                                , nullif(split_part(ordinal,'.',2),'')::int
-                                                               , code)
+                                                               , code desc)
                   from ( select v.version_code code
                               , regexp_replace(v.version_code,'[^.0-9]','','g')::decimal::text ordinal
                               , ( select coalesce(json_agg(a.sample_name order by a.sample_name),'[]'::json)

@@ -321,8 +321,8 @@ as base64url text. The URL is then `https://dbfiddle.uk/<code>`:
 Add `&sample=adventureworks` or `&sample=sakila` for the sample routes. The body is the same
 JSON array of batch strings `run.sh` takes.
 
-Posting the same batches twice returns the same code and replaces the stored output, so a
-saved fiddle is not an archive. Vary the SQL if you want two URLs to compare.
+Every POST saves a new fiddle under a new code, even for identical batches, and counts as a
+run in `fiddle_daily`.
 
 ## Verification
 

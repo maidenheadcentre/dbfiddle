@@ -2,8 +2,7 @@
 set -euo pipefail
 
 components/codemirror/node_modules/.bin/rollup components/codemirror/build.js --format iife --name cm --file s3/codemirror.js --plugin @rollup/plugin-node-resolve
-components/light/node_modules/.bin/esbuild s3/codemirror.js --minify --allow-overwrite --outfile=s3/codemirror.js
-components/light/node_modules/.bin/esbuild components/light/index.mjs --bundle --minify --outfile=s3/light.js
+components/codemirror/node_modules/.bin/esbuild s3/codemirror.js --minify --allow-overwrite --outfile=s3/codemirror.js
 
 root=$PWD
 rm -rf "$root/build" "$root/layer/shared/manifest.json"

@@ -8,15 +8,13 @@ create function get() returns jsonb as $$
   from
     ( select
         coalesce(reltuples::integer,0) source_total_count
-      , ( select json_agg(z order by total90 desc)
+      , ( select json_agg(to_jsonb(z)-'total90' order by total90 desc)
           from
             ( select
                 engine_code code
               , engine_name "name"
               , engine_total total
               , engine_total_90 total90
-              , engine_total_7 total7
-              , engine_total_today total1
               , ( select encode(a.allowed_default_fiddle_code,'hex')
                   from allowed a
                   where
@@ -24,37 +22,22 @@ create function get() returns jsonb as $$
                     a.version_code=e.engine_default_version_code and
                     a.sample_name=''
                 ) fiddle
-              , ( select json_agg(z order by total90 desc)
+              , ( select json_agg(to_jsonb(z)-'ordinal' order by split_part(ordinal,'.',1)::int desc, nullif(split_part(ordinal,'.',2),'')::int desc, "name")
                   from
                     ( select
-                        version_code code
-                      , version_name "name"
-                      , version_total total
-                      , version_total_90 total90
-                      , version_total_7 total7
-                      , version_total_today total1
+                        version_name "name"
+                      , regexp_replace(version_code,'[^.0-9]','','g')::decimal::text ordinal
+                      , version_code = e.engine_default_version_code is_default
+                      , exists(select from allowed a where a.engine_code=v.engine_code and a.version_code=v.version_code and a.allowed_fail_since is not null) is_down
                       , ( select encode(a.allowed_default_fiddle_code,'hex')
                           from allowed a
                           where
-                            v.version_is_active and
                             a.engine_code=v.engine_code and
                             a.version_code=v.version_code and
                             a.sample_name=''
                         ) fiddle
-                      from
-                        version v
-                        natural join
-                          ( select
-                              engine_code
-                            , version_code
-                            , coalesce(sum(fiddle_daily_count),0)::integer version_total
-                            , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-90)),0)::integer version_total_90
-                            , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-7)),0)::integer version_total_7
-                            , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on>=current_date)),0)::integer version_total_today
-                            from fiddle_daily d
-                            group by engine_code, version_code
-                          ) z
-                      where v.engine_code = e.engine_code
+                      from version v
+                      where v.engine_code = e.engine_code and v.version_is_active
                     ) z
                 ) versions
               from
@@ -64,16 +47,35 @@ create function get() returns jsonb as $$
                       engine_code
                     , coalesce(sum(fiddle_daily_count),0)::integer engine_total
                     , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-90)),0)::integer engine_total_90
-                    , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on<current_date and fiddle_daily_on>=current_date-7)),0)::integer engine_total_7
-                    , coalesce((sum(fiddle_daily_count) filter (where fiddle_daily_on>=current_date)),0)::integer engine_total_today
                     from fiddle_daily
                     group by engine_code
                   ) z
             ) z
         ) engines
-      , ( select json_agg(z order by name)
-          from ( select engine_name || ' ' || version_name || case when sample_name<>'' then ' ('||sample_name||')' else '' end name, allowed_fail_since is not null is_down from engine natural join version natural join allowed where version_is_active ) z
-        ) alloweds
+      , ( with
+            cal as (select current_date-i fiddle_daily_on from generate_series(1,1826+27) i)
+          , daily as
+              ( select engine_code, fiddle_daily_on, sum(fiddle_daily_count) daily_count
+                from cal natural join fiddle_daily
+                group by engine_code, fiddle_daily_on )
+          , top6 as
+              ( select engine_code, least(6, row_number() over (order by sum(daily_count) filter (where fiddle_daily_on>=current_date-90) desc nulls last)) o
+                from daily
+                group by engine_code )
+          , points as
+              ( select *
+                from
+                  ( select o, fiddle_daily_on d, round(avg(coalesce(sum(daily_count),0)) over (partition by o order by fiddle_daily_on rows 27 preceding))::integer a
+                    from
+                      generate_series(1,6) o cross join
+                      cal natural left join
+                      (daily natural join top6)
+                    group by o, fiddle_daily_on
+                  ) r
+                where d>=current_date-1826 and (current_date-1-d)%7=0 )
+          select json_build_object('dates',(select json_agg(d order by d) from points where o=1),'series',json_agg(a order by o))
+          from (select o, json_agg(a order by d) a from points group by o) s
+        ) chart
       from pg_class
       where oid = 'public.source'::regclass 
     ) z;

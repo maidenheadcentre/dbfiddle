@@ -1,18 +1,25 @@
-main { margin: 16px; }
-table {
-  margin: 16px 0;
-  @media only screen and (max-device-width: 480px){ & { font-size: 14px; } }
+body>header>div+div>span { pointer-events: none; }
+main { margin: 16px auto; padding: 0 16px; width: fit-content; }
+#chart {
+  display: block; contain: inline-size; height: 120px; margin: 16px 0; padding: 8px 10px 4px; border: 1px solid silver; border-radius: 8px;
+  &:hover { border-color: #2a5fcd; }
+  /* echarts sets cursor: default inline on its div at the first mousemove */
+  &>div { cursor: pointer !important; }
 }
-td, th { border: 1px solid silver; padding: 6px; white-space: nowrap; }
-td {
-  text-align: right;
-  &:nth-child(1) { text-align: left; }
-  &:has(input) { border: none; }
-  & input { margin-right: 30px; }
+main>ul {
+  list-style: none; padding: 0; margin: 16px 0;
+  &>li { display: grid; grid-template-columns: 8rem 1fr; gap: 12px; align-items: start; padding: 6px 0; }
+  &>li>div>* { display: inline-block; font-size: 0.8rem; padding: 1px 7px; margin: 2px 0; border: 1px solid silver; border-radius: 4px; text-decoration: none; white-space: nowrap; }
+  &>li>div>.default { background: #2a5fcd; border-color: #2a5fcd; color: white; }
+  &>li>div>[data-down]::before { content: ''; display: inline-block; width: 0.7em; height: 0.7em; margin-right: 0.2em; border-radius: 50%; background: #cc0000; }
 }
 details {
-  margin: 0 0 8px 0;
-  & td:nth-child(2) { text-align: center; }
+  margin: 0 0 8px 0; contain: inline-size;
   & li { margin-top : 8px; }
 }
-
+@media (max-width: 30rem) {
+  body>header>div+div>span { display: none; }
+  #chart { height: 90px; }
+  main>ul>li { display: block; }
+  main>ul>li>div>* { padding: 5px 10px; margin: 6px 2px 0 0; }
+}

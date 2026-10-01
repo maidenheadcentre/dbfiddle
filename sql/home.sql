@@ -22,6 +22,13 @@ create function get() returns jsonb as $$
                     a.version_code=e.engine_default_version_code and
                     a.sample_name=''
                 ) fiddle
+              , ( select a.allowed_default_query
+                  from allowed a
+                  where
+                    a.engine_code=e.engine_code and
+                    a.version_code=e.engine_default_version_code and
+                    a.sample_name=''
+                ) query
               , ( select json_agg(to_jsonb(z)-'ordinal' order by split_part(ordinal,'.',1)::int desc, nullif(split_part(ordinal,'.',2),'')::int desc, "name")
                   from
                     ( select
@@ -36,6 +43,13 @@ create function get() returns jsonb as $$
                             a.version_code=v.version_code and
                             a.sample_name=''
                         ) fiddle
+                      , ( select a.allowed_default_query
+                          from allowed a
+                          where
+                            a.engine_code=v.engine_code and
+                            a.version_code=v.version_code and
+                            a.sample_name=''
+                        ) query
                       from version v
                       where v.engine_code = e.engine_code and v.version_is_active
                     ) z

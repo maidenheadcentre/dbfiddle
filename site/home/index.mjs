@@ -23,8 +23,8 @@ export const handler = async (event) => {
 
   // redirect engine name link (eg "/?engine=postgres") to default fiddle
   if( qp && Object.hasOwn(qp,'engine') ) {
-    const code = data.engines.find(e => e.code===qp.engine)?.fiddle;
-    if(code) return { statusCode: 302, headers: { 'Location': `/${Buffer.from(code, 'hex').toString('base64url')}` } };
+    const engine = data.engines.find(e => e.code===qp.engine);
+    if(engine?.fiddle) return { statusCode: 302, headers: { 'Location': `/${Buffer.from(engine.fiddle, 'hex').toString('base64url')}${engine.query ? '?'+engine.query : ''}` } };
     return { statusCode: 404, body: JSON.stringify('not found') };
   }
 
@@ -69,9 +69,9 @@ export const handler = async (event) => {
     <a id="chart" href="/xeFbuySy?render=echarts" aria-label="fiddles per day by engine" data-chart="${JSON.stringify(data.chart).replaceAll('"','&quot;')}"></a>
     <ul>${data.engines.reduce((p,engine) => /*html*/`${p}
       <li>
-        ${engine.fiddle ? /*html*/`<a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}">${engine.name}</a>` : /*html*/`<span>${engine.name}</span>`}
+        ${engine.fiddle ? /*html*/`<a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}${engine.query ? '?'+engine.query : ''}">${engine.name}</a>` : /*html*/`<span>${engine.name}</span>`}
         <div>${engine.versions.reduce((p,version) => /*html*/`${p}
-          <${version.fiddle ? `a href="/${Buffer.from(version.fiddle,'hex').toString('base64url')}"` : 'span'}${version.is_default ? ' class="default"' : ''}${version.is_down ? ' data-down' : ''}>
+          <${version.fiddle ? `a href="/${Buffer.from(version.fiddle,'hex').toString('base64url')}${version.query ? '?'+version.query : ''}"` : 'span'}${version.is_default ? ' class="default"' : ''}${version.is_down ? ' data-down' : ''}>
             ${version.name}
           </${version.fiddle ? 'a' : 'span'}>`, '')}
         </div>

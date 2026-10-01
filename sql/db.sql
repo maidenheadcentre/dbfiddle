@@ -48,6 +48,7 @@ create table allowed(
 , allowed_last_test_at timestamptz default timestamptz '-infinity' not null
 , allowed_fail_since timestamptz
 , allowed_default_fiddle_code bytea
+, allowed_default_query text
 , primary key (engine_code,version_code,sample_name)
 , foreign key (engine_code,version_code) references version(engine_code,version_code)
 );

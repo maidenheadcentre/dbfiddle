@@ -1,0 +1,30 @@
+# nothing volatile: no sysdate, systimestamp, dbms_random, sys_guid, rowid, or anything
+# that prints the client or server version
+
+# sqlplus's own defaults: headings, pagesize 14, serveroutput off until asked
+[["select level n from dual connect by level <= 20;","sqlplus"]]
+[["begin dbms_output.put_line('off by default'); end;\n/","sqlplus"]]
+[["set serveroutput on\nbegin dbms_output.put_line('on'); end;\n/","sqlplus"]]
+
+# the sqlplus commands people paste
+[["create procedure broken as begin x := 1; end;\n/\nshow errors","sqlplus"]]
+[["desc dual","sqlplus"]]
+[["column s format a5\nselect 'abcdefgh' s from dual;","sqlplus"]]
+[["select * from no_such_table;\nselect 'still running' s from dual;","sqlplus"]]
+
+# exit status, and an unspoken language
+[["exit 3","sqlplus"]]
+[["select 1 from dual","bash"]]
+
+# what each side sees: the SQL batches never commit, sqlplus commits on exit
+["create table t(x number)","insert into t values (1)",["select count(*) from t;","sqlplus"]]
+["create table t(x number)",["insert into t values (1);","sqlplus"],"select count(*) from t"]
+
+# not languages, but 26 only: dbms_output on for the whole session (a called procedure, a
+# disable that sticks, output past the old 32767-byte reader), a compile error's ORA-24344,
+# and implicit results in order
+["create procedure hello as begin dbms_output.put_line('hello'); end;\n/","begin hello; end;\n/"]
+["begin dbms_output.disable; end;\n/","begin dbms_output.put_line('hidden'); end;\n/"]
+["begin dbms_output.enable(null); for i in 1..400 loop dbms_output.put_line(rpad(i,99,'x')); end loop; end;\n/"]
+["create procedure broken as begin x := 1; end;\n/"]
+["declare a sys_refcursor; b sys_refcursor; begin open a for select 1 n from dual; dbms_sql.return_result(a); open b for select 'x' s from dual; dbms_sql.return_result(b); end;\n/"]

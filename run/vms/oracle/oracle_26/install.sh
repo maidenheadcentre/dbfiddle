@@ -144,7 +144,7 @@ RUN dnf -y install systemd oracle-ai-database-preinstall-26ai cronie tmux util-l
 RUN dnf -y install oracle-epel-release-el9 && dnf -y install haveged
 # gcc stays: the runner is compiled in a chroot of this rootfs further down
 RUN dnf -y install make gcc
-RUN curl -Lo /tmp/oracle-free.rpm https://download.oracle.com/otn-pub/otn_software/db-free/oracle-ai-database-free-26ai-23.26.2-1.el9.x86_64.rpm \
+RUN curl -Lo /tmp/oracle-free.rpm https://download.oracle.com/otn-pub/otn_software/db-free/oracle-ai-database-free-26ai-23.26.3-1.el9.x86_64.rpm \
   && ORACLE_DOCKER_INSTALL=true dnf -y localinstall /tmp/oracle-free.rpm \
   && rm /tmp/oracle-free.rpm
 RUN echo /opt/oracle/product/26ai/dbhomeFree/lib > /etc/ld.so.conf.d/oracle.conf && ldconfig
@@ -189,19 +189,22 @@ grant execute on dbms_session to fiddle with grant option;
 exit
 SQL
 $ORACLE_HOME/bin/sqlplus fiddle/IIGjTTbsEzh64McU@//localhost:1521/freepdb1 <<"SQL"
-create or replace function dbmsoutput return varchar as
-  line varchar(32767);
+-- writeappend, never ret := ret||line: concatenation copies the whole clob on every line
+create or replace function dbmsoutput return clob as
+  line varchar2(32767);
   status number;
-  ret varchar(32767);
+  ret clob;
+  n number := 0;
 begin
+  dbms_lob.createtemporary(ret, true);
   loop
     dbms_output.get_line(line,status);
-    if status = 0 then
-      ret := (case when ret is null then line else ret||chr(10)||line end);
-    else
-      exit;
-    end if;
+    exit when status != 0;
+    if n > 0 then dbms_lob.writeappend(ret, 1, chr(10)); end if;
+    if line is not null then dbms_lob.writeappend(ret, length(line), line); end if;
+    n := n + 1;
   end loop;
+  if n = 0 then return null; end if;
   return ret;
 end;
 /
@@ -269,14 +272,21 @@ int main(void){
 }
 EOP
 <<'EOC' cat > /mnt/fire/oracle_26/mnt/fiddle.c
-/* shared across the oracle family apart from the connect string and 11.2, 18 and 21's
- * seed_random(): carry a change to every copy.
+/* shared across the oracle family apart from the connect string, 11.2, 18 and 21's
+ * seed_random(), and 26's dbms_output, info messages, implicit results and sqlplus
+ * batches: carry any other change to every copy.
  * quirk kept: a BLOB renders through md_cell as text; only RAW and LONG RAW render as 0x...
  */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/wait.h>
 #include <oci.h>
 
 static void oom(void){ fputs("out of memory\n", stderr); exit(1); }
@@ -385,8 +395,11 @@ static const char *skip_ws(const char *p){
   return p;
 }
 
-typedef struct { char *s; size_t len; } batch;
+/* lang is "" for SQL; never NULL */
+typedef struct { char *s; size_t len; char *lang; } batch;
 
+/* a string (SQL) or a [text, language] pair: documentdb_0.116's parse_batches, as both
+   runners read the same wire format */
 static batch *parse_batches(const char *text, size_t *count){
   size_t cap = 8, n = 0;
   batch *v = malloc(cap * sizeof *v);
@@ -396,9 +409,24 @@ static batch *parse_batches(const char *text, size_t *count){
   p = skip_ws(p + 1);
   if(*p == ']'){ p++; goto done; }
   for(;;){
-    sbuf s = {0};
+    sbuf s = {0}, l = {0};
     sb_reserve(&s, 1);
-    if(!parse_json_string(&p, &s)){ sb_free(&s); goto fail; }
+    s.s[0] = 0;
+    sb_reserve(&l, 1);
+    l.s[0] = 0;
+    if(*p == '['){
+      p = skip_ws(p + 1);
+      if(!parse_json_string(&p, &s)) goto elemfail;
+      p = skip_ws(p);
+      if(*p != ',') goto elemfail;
+      p = skip_ws(p + 1);
+      if(!parse_json_string(&p, &l)) goto elemfail;
+      p = skip_ws(p);
+      if(*p != ']') goto elemfail;
+      p++;
+    } else if(!parse_json_string(&p, &s)){
+      goto elemfail;
+    }
     if(n == cap){
       cap *= 2;
       v = realloc(v, cap * sizeof *v);
@@ -406,10 +434,15 @@ static batch *parse_batches(const char *text, size_t *count){
     }
     v[n].s = s.s;
     v[n].len = s.len;
+    v[n].lang = l.s;
     n++;
     p = skip_ws(p);
     if(*p == ','){ p = skip_ws(p + 1); continue; }
     if(*p == ']'){ p++; break; }
+    goto fail;
+  elemfail:
+    sb_free(&s);
+    sb_free(&l);
     goto fail;
   }
 done:
@@ -417,7 +450,7 @@ done:
   *count = n;
   return v;
 fail:
-  for(size_t i = 0; i < n; i++) free(v[i].s);
+  for(size_t i = 0; i < n; i++){ free(v[i].s); free(v[i].lang); }
   free(v);
   *count = 0;
   return NULL;
@@ -688,24 +721,141 @@ static void exec_simple(const char *sql){
   OCIStmtRelease(s, err, NULL, 0, OCI_DEFAULT);
 }
 
-static char *fetch_dbms_output(void){
+static char *fetch_dbms_output(size_t *n){
   static const char *sql = "select fiddle.dbmsoutput() from dual";
   OCIStmt *s = NULL;
+  OCILobLocator *lob = NULL;
   char *buf = NULL;
+  *n = 0;
   if(OCIStmtPrepare2(svc, &s, err, (const OraText *)sql, (ub4)strlen(sql),
                      NULL, 0, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) return NULL;
   if(OCIStmtExecute(svc, s, err, 0, 0, NULL, NULL, OCI_DEFAULT) == OCI_SUCCESS){
-    buf = malloc(32768);
-    if(!buf) oom();
-    buf[0] = 0;
     sb2 ind = 0;
     OCIDefine *dfn = NULL;
-    OCIDefineByPos(s, &dfn, err, 1, buf, 32768, SQLT_STR, &ind, NULL, NULL, OCI_DEFAULT);
-    sword rc = OCIStmtFetch2(s, err, 1, OCI_FETCH_NEXT, 0, OCI_DEFAULT);
-    if(rc != OCI_SUCCESS || ind == -1){ free(buf); buf = NULL; }
+    OCIDescriptorAlloc(env, (void **)&lob, OCI_DTYPE_LOB, 0, NULL);
+    OCIDefineByPos(s, &dfn, err, 1, &lob, (sb4)-1, SQLT_CLOB, &ind, NULL, NULL, OCI_DEFAULT);
+    if(OCIStmtFetch2(s, err, 1, OCI_FETCH_NEXT, 0, OCI_DEFAULT) == OCI_SUCCESS && ind != -1)
+      buf = lob_read(lob, 0, SQLCS_IMPLICIT, n);
+    OCIDescriptorFree(lob, OCI_DTYPE_LOB);
   }
   OCIStmtRelease(s, err, NULL, 0, OCI_DEFAULT);
   return buf;
+}
+
+/* ---- sqlplus batches ---- */
+
+static void fence_plain(sbuf *out, const char *text, size_t n, const char *label){
+  size_t fence = 3, run = 0;
+  for(size_t i = 0; i < n; i++){
+    if(text[i] == '`'){ run++; if(run >= fence) fence++; }
+    else run = 0;
+  }
+  for(size_t i = 0; i < fence; i++) sb_putc(out, '`');
+  if(*label){ sb_putc(out, ' '); sb_puts(out, label); }
+  sb_putc(out, '\n');
+  sb_putn(out, text, n);
+  if(n && text[n-1] != '\n') sb_putc(out, '\n');
+  for(size_t i = 0; i < fence; i++) sb_putc(out, '`');
+  sb_puts(out, "\n\n");
+}
+
+static long now_ms(void){
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+}
+
+#define CAP (4L << 20)
+
+/* the batch goes in as a script with stdin at EOF, never on stdin: there, a substitution
+   variable's prompt would read the script's next line as its value. The logon is the
+   runner's, never the user's: a batch must not choose its server */
+static int run_sqlplus(const char *path, sbuf *so, sbuf *se, int *status, long deadline){
+  int op[2], ep[2];
+  if(pipe(op) < 0) return 0;
+  if(pipe(ep) < 0){ close(op[0]); close(op[1]); return 0; }
+
+  pid_t pid = fork();
+  if(pid < 0){ close(op[0]); close(op[1]); close(ep[0]); close(ep[1]); return 0; }
+  if(pid == 0){
+    char at[80];
+    snprintf(at, sizeof at, "@%s", path);
+    char *av[] = { "/opt/oracle/product/26ai/dbhomeFree/bin/sqlplus", "-s", "-L",
+                   "fiddle/IIGjTTbsEzh64McU@localhost/freepdb1", at, NULL };
+    int in = open("/dev/null", O_RDONLY);
+    dup2(in, 0); dup2(op[1], 1); dup2(ep[1], 2);
+    close(in); close(op[0]); close(op[1]); close(ep[0]); close(ep[1]);
+    if(chdir("/tmp") != 0) _exit(126);
+    execv(av[0], av);
+    _exit(127);
+  }
+  close(op[1]); close(ep[1]);
+
+  int done = 0, killed = 0;
+  struct pollfd p[2] = { { op[0], POLLIN, 0 }, { ep[0], POLLIN, 0 } };
+  while(done < 2){
+    long left = deadline - now_ms();
+    if(left <= 0){ kill(pid, SIGKILL); killed = 1; break; }
+    int r = poll(p, 2, left > 200 ? 200 : (int)left);
+    if(r < 0) break;
+    for(int i = 0; i < 2; i++){
+      if(p[i].fd < 0 || !(p[i].revents & (POLLIN | POLLHUP))) continue;
+      char t[65536];
+      ssize_t k = read(p[i].fd, t, sizeof t);
+      if(k > 0){
+        sbuf *d = i ? se : so;
+        if(d->len < (size_t)CAP) sb_putn(d, t, (size_t)k);
+      } else {
+        close(p[i].fd); p[i].fd = -1; done++;
+      }
+    }
+  }
+  for(int i = 0; i < 2; i++) if(p[i].fd >= 0) close(p[i].fd);
+  int st = 0;
+  waitpid(pid, &st, 0);
+  *status = WIFEXITED(st) ? WEXITSTATUS(st) : -1;
+  return killed;
+}
+
+static void lang_batch(sbuf *md, const batch *b, size_t i, long deadline){
+  if(strcmp(b->lang, "sqlplus")){
+    sbuf m = {0};
+    sb_puts(&m, "unknown language: ");
+    sb_puts(&m, b->lang);
+    fence_block(md, m.s, m.len, "error");
+    sb_free(&m);
+    return;
+  }
+  if(now_ms() >= deadline){
+    const char *m = "not run: an earlier batch used the runner's time budget";
+    fence_block(md, m, strlen(m), "error");
+    return;
+  }
+  char path[64];
+  snprintf(path, sizeof path, "/tmp/batch%zu.sql", i + 1);
+  FILE *f = fopen(path, "wb");
+  if(!f || fwrite(b->s, 1, b->len, f) != b->len){
+    if(f) fclose(f);
+    const char *m = "could not write the script";
+    fence_block(md, m, strlen(m), "error");
+    return;
+  }
+  fclose(f);
+  sbuf so = {0}, se = {0};
+  int status = 0;
+  int killed = run_sqlplus(path, &so, &se, &status, deadline);
+  if(so.len) fence_plain(md, so.s, so.len, "");
+  if(se.len) fence_block(md, se.s, se.len, "error");
+  if(killed){
+    const char *m = "batch did not finish within the runner's time budget";
+    fence_block(md, m, strlen(m), "error");
+  } else if(status != 0 && !se.len){
+    char m[64];
+    int n = snprintf(m, sizeof m, "exited with status %d", status);
+    fence_block(md, m, (size_t)n, "error");
+  }
+  sb_free(&so);
+  sb_free(&se);
 }
 
 /* ---- main ---- */
@@ -780,21 +930,38 @@ int main(int argc, char **argv){
     }
     printf("warm-up: %s", md.len ? md.s : "FAILED\n");
     sb_free(&md);
+    static const char *q = "select 1 from dual;\n";
+    batch w = { (char *)q, strlen(q), (char *)"sqlplus" };
+    lang_batch(&md, &w, 0, now_ms() + 15000);
+    int ok = md.s && strstr(md.s, "----------");
+    printf("sqlplus warm-up: %s\n%s", ok ? "ok" : "FAILED", ok || !md.s ? "" : md.s);
+    sb_free(&md);
     OCILogoff(svc, err);
     return 0;
   }
+
+  /* once for the session, never per batch: a user's own disable or enable(n) must stick */
+  exec_simple("call dbms_output.enable()");
 
   size_t blen = 0, nb = 0;
   char *btext = read_file(inpath, &blen);
   batch *batches = btext ? parse_batches(btext, &nb) : NULL;
 
+  /* 15s, inside run.sh's 20s: a hung sqlplus batch must leave time to return a body */
+  long deadline = now_ms() + 15000;
+
   sbuf out = {0};
   sb_putc(&out, '[');
   for(size_t i = 0; i < nb; i++){
     sbuf md = {0};
-    int dbmsoutput = strcasestr(batches[i].s, "dbms_output") != NULL;
+    if(batches[i].lang[0]){
+      lang_batch(&md, &batches[i], i, deadline);
+      if(i) sb_putc(&out, ',');
+      json_emit_string(&out, md.s ? md.s : "", md.len);
+      sb_free(&md);
+      continue;
+    }
     trim_batch(batches[i].s, &batches[i].len);
-    if(dbmsoutput) exec_simple("call dbms_output.enable()");
 
     OCIStmt *stmt = NULL;
     if(batches[i].len == 0){ /* an empty batch yields neither rows nor error */ }
@@ -820,6 +987,23 @@ int main(int argc, char **argv){
             fence_block(&md, t, (size_t)n, "status");
           }
         }
+        void *res = NULL;
+        ub4 rtype = 0;
+        while(OCIStmtGetNextResult(stmt, err, &res, &rtype, OCI_DEFAULT) == OCI_SUCCESS){
+          if(rtype != OCI_RESULT_TYPE_SELECT) continue;
+          ub4 rnf = 0;
+          OCIAttrGet(res, OCI_HTYPE_STMT, &rnf, NULL, OCI_ATTR_PARAM_COUNT, err);
+          if(rnf){
+            render_result(&md, (OCIStmt *)res, rnf);
+            sb_putc(&md, '\n');
+          }
+        }
+        if(rc == OCI_SUCCESS_WITH_INFO){
+          sbuf e = {0};
+          oci_msg(&e, err, OCI_HTYPE_ERROR);
+          fence_block(&md, e.s ? e.s : "", e.len, "status");
+          sb_free(&e);
+        }
       } else {
         sbuf e = {0};
         oci_msg(&e, err, OCI_HTYPE_ERROR);
@@ -834,11 +1018,9 @@ int main(int argc, char **argv){
       sb_free(&e);
     }
 
-    if(dbmsoutput){
-      char *o = fetch_dbms_output();
-      if(o){ fence_block(&md, o, strlen(o), "dbms_output"); free(o); }
-      exec_simple("call dbms_output.disable()");
-    }
+    size_t on = 0;
+    char *o = fetch_dbms_output(&on);
+    if(o){ fence_block(&md, o, on, "dbms_output"); free(o); }
 
     if(i) sb_putc(&out, ',');
     json_emit_string(&out, md.s ? md.s : "", md.len);
@@ -884,6 +1066,7 @@ zfs set recordsize=16K tank/fire/oracle_26
 # a cold snapshot just serves slowly: check the warm-up ran
 grep -a 'warm-up:' /tmp/fc-snap-oracle_26.log
 grep -a 'FIDDLE-SETTLED' /tmp/fc-snap-oracle_26.log || { echo "ABORT: the guest never went idle before the snapshot"; exit 1; }
+grep -aq 'sqlplus warm-up: ok' /tmp/fc-snap-oracle_26.log || { echo "ABORT: sqlplus did not run in the guest"; exit 1; }
 
 # never -R: on a live engine it destroys the clones of in-flight fiddles
 zfs destroy tank/fire/oracle_26@base 2>/dev/null || true
@@ -894,3 +1077,44 @@ out=$(echo '["select 1 from dual"]' | /mnt/fire/oracle_26/run.sh) || true
 printf '%s\n' "$out"
 # run.sh has no meaningful exit status: assert on the body
 [ -n "$out" ] || { echo "ABORT: verification fiddle returned an empty body"; exit 1; }
+
+cat > /tmp/oracle_26-check.json <<'JSON'
+["create table t(x number)",
+ "insert into t values (42)",
+ ["select 'before:'||count(*) s from t;","sqlplus"],
+ "commit",
+ ["select 'sees:'||x s from t;\ninsert into t values (1);","sqlplus"],
+ "select x from t order by x",
+ ["select 1 from dual","bash"],
+ ["exit 3","sqlplus"],
+ "create procedure hello as begin dbms_output.put_line('hello-out'); end;\n/",
+ "begin hello; end;\n/",
+ "declare c sys_refcursor; begin open c for select 'implicit-ok' r from dual; dbms_sql.return_result(c); end;\n/",
+ "create procedure broken as begin x := 1; end;\n/"]
+JSON
+check=$(/mnt/fire/oracle_26/run.sh < /tmp/oracle_26-check.json) || true
+printf '%s\n' "$check"
+case $check in *before:0*) ;;
+  *) echo "ABORT: the sqlplus batch did not read the engine, or saw an uncommitted insert"; exit 1 ;;
+esac
+case $check in *sees:42*) ;;
+  *) echo "ABORT: a committed insert was not visible to sqlplus"; exit 1 ;;
+esac
+case $check in *"| 1 |"*"| 42 |"*) ;;
+  *) echo "ABORT: sqlplus's commit on exit was not visible to the next SQL batch"; exit 1 ;;
+esac
+case $check in *"unknown language: bash"*) ;;
+  *) echo "ABORT: an unspoken language was not fenced"; exit 1 ;;
+esac
+case $check in *"exited with status 3"*) ;;
+  *) echo "ABORT: a non-zero exit was not reported"; exit 1 ;;
+esac
+case $check in *hello-out*) ;;
+  *) echo "ABORT: dbms_output from a called procedure was lost"; exit 1 ;;
+esac
+case $check in *implicit-ok*) ;;
+  *) echo "ABORT: an implicit result was not rendered"; exit 1 ;;
+esac
+case $check in *ORA-24344*) ;;
+  *) echo "ABORT: a compile error was not reported"; exit 1 ;;
+esac

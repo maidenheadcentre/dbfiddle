@@ -188,28 +188,6 @@ grant select on v_$sql to fiddle with grant option;
 grant execute on dbms_session to fiddle with grant option;
 exit
 SQL
-$ORACLE_HOME/bin/sqlplus fiddle/IIGjTTbsEzh64McU@//localhost:1521/freepdb1 <<"SQL"
--- writeappend, never ret := ret||line: concatenation copies the whole clob on every line
-create or replace function dbmsoutput return clob as
-  line varchar2(32767);
-  status number;
-  ret clob;
-  n number := 0;
-begin
-  dbms_lob.createtemporary(ret, true);
-  loop
-    dbms_output.get_line(line,status);
-    exit when status != 0;
-    if n > 0 then dbms_lob.writeappend(ret, 1, chr(10)); end if;
-    if line is not null then dbms_lob.writeappend(ret, length(line), line); end if;
-    n := n + 1;
-  end loop;
-  if n = 0 then return null; end if;
-  return ret;
-end;
-/
-exit
-SQL
 /etc/init.d/oracle-free-26ai stop
 for d in bin etc home lib lib64 opt root sbin usr dev run var; do tar c "/$d" | tar x -C /my-rootfs; done
 for dir in proc sys data; do mkdir /my-rootfs/${dir}; done
@@ -721,23 +699,40 @@ static void exec_simple(const char *sql){
   OCIStmtRelease(s, err, NULL, 0, OCI_DEFAULT);
 }
 
+/* an anonymous block, never a stored function: it must run as whichever user the runner logs
+   on as, with no object of its own in that schema. writeappend, never c := c||line:
+   concatenation copies the whole clob on every line */
 static char *fetch_dbms_output(size_t *n){
-  static const char *sql = "select fiddle.dbmsoutput() from dual";
+  static const char *sql =
+    "declare line varchar2(32767); status number; c clob; k number := 0; "
+    "begin "
+    "dbms_lob.createtemporary(c, true); "
+    "loop "
+    "dbms_output.get_line(line, status); "
+    "exit when status != 0; "
+    "if k > 0 then dbms_lob.writeappend(c, 1, chr(10)); end if; "
+    "if line is not null then dbms_lob.writeappend(c, length(line), line); end if; "
+    "k := k + 1; "
+    "end loop; "
+    "if k > 0 then :out := c; end if; "
+    "end;";
   OCIStmt *s = NULL;
+  OCIBind *bnd = NULL;
   OCILobLocator *lob = NULL;
+  sb2 ind = -1;
   char *buf = NULL;
   *n = 0;
   if(OCIStmtPrepare2(svc, &s, err, (const OraText *)sql, (ub4)strlen(sql),
                      NULL, 0, OCI_NTV_SYNTAX, OCI_DEFAULT) != OCI_SUCCESS) return NULL;
-  if(OCIStmtExecute(svc, s, err, 0, 0, NULL, NULL, OCI_DEFAULT) == OCI_SUCCESS){
-    sb2 ind = 0;
-    OCIDefine *dfn = NULL;
-    OCIDescriptorAlloc(env, (void **)&lob, OCI_DTYPE_LOB, 0, NULL);
-    OCIDefineByPos(s, &dfn, err, 1, &lob, (sb4)-1, SQLT_CLOB, &ind, NULL, NULL, OCI_DEFAULT);
-    if(OCIStmtFetch2(s, err, 1, OCI_FETCH_NEXT, 0, OCI_DEFAULT) == OCI_SUCCESS && ind != -1)
-      buf = lob_read(lob, 0, SQLCS_IMPLICIT, n);
-    OCIDescriptorFree(lob, OCI_DTYPE_LOB);
+  OCIDescriptorAlloc(env, (void **)&lob, OCI_DTYPE_LOB, 0, NULL);
+  if(OCIBindByName(s, &bnd, err, (const OraText *)":out", 4, &lob, (sb4)sizeof lob,
+                   SQLT_CLOB, &ind, NULL, NULL, 0, NULL, OCI_DEFAULT) == OCI_SUCCESS
+     && OCIStmtExecute(svc, s, err, 1, 0, NULL, NULL, OCI_DEFAULT) == OCI_SUCCESS
+     && ind != -1){
+    buf = lob_read(lob, 0, SQLCS_IMPLICIT, n);
+    OCILobFreeTemporary(svc, err, lob);
   }
+  OCIDescriptorFree(lob, OCI_DTYPE_LOB);
   OCIStmtRelease(s, err, NULL, 0, OCI_DEFAULT);
   return buf;
 }

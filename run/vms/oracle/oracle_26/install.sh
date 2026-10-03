@@ -233,6 +233,18 @@ runuser -u oracle -- $ORACLE_HOME/bin/lsnrctl start
 echo FIDDLE-LSNR > /dev/console
 echo startup | runuser -u oracle -- $ORACLE_HOME/bin/sqlplus -s / as sysdba > /dev/console 2>&1
 until echo "select open_mode from v\$pdbs where name='FREEPDB1';" | runuser -u oracle -- $ORACLE_HOME/bin/sqlplus -s / as sysdba | grep -q 'READ WRITE' ; do sleep 0.5 ; done
+# snapshot only once the post-open background work is done (30s under 5% busy), or every
+# restore replays it and a fiddle gets a third of the cpu
+n=0; i=0
+while [ $n -lt 6 ] && [ $i -lt 120 ]; do
+  set -- $(head -1 /proc/stat); u=$(( $2 + $3 + $4 + $7 + $8 )); t=$(( u + $5 + $6 ))
+  sleep 5
+  set -- $(head -1 /proc/stat)
+  busy=$(( 100 * ($2 + $3 + $4 + $7 + $8 - u) / ($2 + $3 + $4 + $5 + $6 + $7 + $8 - t) ))
+  if [ $busy -lt 5 ]; then n=$((n + 1)); else n=0; fi
+  i=$((i + 1))
+done
+[ $n -lt 6 ] || printf 'FIDDLE-SETTLED after %s samples\n' $i > /dev/console
 /fiddle --warmup > /dev/console 2>&1
 echo FIDDLE-WARMED > /dev/console
 sync
@@ -871,6 +883,7 @@ zfs set recordsize=16K tank/fire/oracle_26
   kill $! || true )
 # a cold snapshot just serves slowly: check the warm-up ran
 grep -a 'warm-up:' /tmp/fc-snap-oracle_26.log
+grep -a 'FIDDLE-SETTLED' /tmp/fc-snap-oracle_26.log || { echo "ABORT: the guest never went idle before the snapshot"; exit 1; }
 
 # never -R: on a live engine it destroys the clones of in-flight fiddles
 zfs destroy tank/fire/oracle_26@base 2>/dev/null || true

@@ -66,7 +66,7 @@ export const handler = async (event) => {
   </header>
   <main>
     <p>${total.toLocaleString()} fiddles from about ${(100 * Math.round(data.source_total_count*1.5/100)).toLocaleString()} IP addresses</p>
-    <a id="chart" href="/xeFbuySy?render=echarts" aria-label="fiddles per day by engine" data-chart="${JSON.stringify(data.chart).replaceAll('"','&quot;')}"></a>
+    <a id="chart" href="/HVW0ex-y?render=echarts" aria-label="fiddles per day by engine" data-chart="${JSON.stringify(data.chart).replaceAll('"','&quot;')}"></a>
     <ul>${data.engines.reduce((p,engine) => /*html*/`${p}
       <li>
         ${engine.fiddle ? /*html*/`<a href="/${Buffer.from(engine.fiddle,'hex').toString('base64url')}${engine.query ? '?'+engine.query : ''}">${engine.name}</a>` : /*html*/`<span>${engine.name}</span>`}

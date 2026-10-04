@@ -208,7 +208,7 @@ export const handler = async event => {
       <a href='https://github.com/maidenheadcentre/dbfiddle#readme'>about</a>
     </div>
   </header>
-  <main${Object.entries(RENDERERS).map(([name, src]) => ` data-${name}="${src}"`).join('')}>
+  <main${Object.entries(RENDERERS).map(([name, src]) => ` data-${name}="${src}"`).join('')} data-languages="${JSON.stringify(data.languages).replaceAll('&','&amp;').replaceAll('"','&quot;')}">
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${banner}
     </header>

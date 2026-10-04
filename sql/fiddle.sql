@@ -31,6 +31,7 @@ create function get(bytea) returns jsonb as $$
                   where s.engine_code = f.engine_code and
                         s.version_code = f.version_code and
                         s.language_code <> 'sql') version_languages
+               , (select json_object_agg(language_code, language_name) from language) languages
                , ( select json_build_object('code', dv.version_code, 'name', dv.version_name)
                    from version dv natural join allowed a
                    where not v.version_is_active

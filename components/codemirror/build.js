@@ -27,7 +27,7 @@ const languageExtension = (engine,lang) => [
   showPanel.of((!lang || lang === 'sql') ? null : () => {
     const dom = document.createElement('div');
     dom.className = 'cm-lang';
-    dom.textContent = lang;
+    dom.textContent = JSON.parse(document.querySelector('main').dataset.languages)[lang] ?? lang;
     return { dom, top: true };
   }),
 ];

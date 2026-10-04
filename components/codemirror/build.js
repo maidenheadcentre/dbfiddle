@@ -35,6 +35,8 @@ const languageExtension = (engine,lang) => [
 const editorFromTextArea = (textarea,engine,lang) => {
   let language = new Compartment;
   let editable = new Compartment;
+  let offer = new Compartment;
+  let offered = null;
   let view = new EditorView({ doc: textarea.value, extensions: [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -52,6 +54,7 @@ const editorFromTextArea = (textarea,engine,lang) => {
     highlightSelectionMatches(),
     language.of(languageExtension(engine,lang)),
     editable.of(EditorState.readOnly.of(false)),
+    offer.of([]),
     keymap.of([
       ...standardKeymap,
       ...searchKeymap,
@@ -71,11 +74,18 @@ const editorFromTextArea = (textarea,engine,lang) => {
           line.querySelector('.plus:last-child').click();
           view.focus();
         }
+        const paste = update.transactions.some(t => t.isUserEvent('input.paste') || t.isUserEvent('input.drop'));
+        view.dom.dispatchEvent(new CustomEvent('batchchange', { bubbles: true, detail: { paste } }));
       };
     }),
   ] });
   view.setEditable = b => view.dispatch({ effects: editable.reconfigure(EditorState.readOnly.of(!b)) });
   view.setLanguage = (engine,lang) => view.dispatch({ effects: language.reconfigure(languageExtension(engine,lang)) });
+  view.setOffer = dom => {
+    if(!dom && !offered) return;
+    offered = dom;
+    view.dispatch({ effects: offer.reconfigure(dom ? showPanel.of(() => ({ dom, top: false })) : []) });
+  };
   textarea.parentNode.insertBefore(view.dom, textarea);
   textarea.remove();
   return view;

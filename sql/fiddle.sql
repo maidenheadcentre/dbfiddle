@@ -56,6 +56,7 @@ create function get(bytea) returns jsonb as $$
                              , (select json_agg(z order by split_part(version_ordinal,'.',1)::int, nullif(split_part(version_ordinal,'.',2),'')::int, version_name desc)
                                 from (select version_code
                                            , version_is_active
+                                           , version_assists_split
                                            , version_name
                                            , regexp_replace(version_code,'[^.0-9]','','g')::decimal::text version_ordinal
                                            , (select json_agg(z order by sample_name)

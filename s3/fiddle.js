@@ -7,6 +7,7 @@
   const engineCode = () => document.getElementById('engine').value;
   // 'sql' is the wire spelling of "no data-lang", never a value the runners see
   const speaks = () => (document.querySelector('.version:not(.hidden)').selectedOptions[0]?.dataset.languages ?? 'sql').split(',');
+  const languageName = code => JSON.parse(document.querySelector('main').dataset.languages)[code] ?? code;
   const gate = () => document.querySelector('main').classList.toggle('multilingual', speaks().length > 1);
 
   const MAX_SOURCE = 500000;
@@ -126,6 +127,132 @@
     if((line.dataset.lang ?? 'sql') !== lang) document.getElementById('markdown').disabled = true;
     if(lang === 'sql') delete line.dataset.lang; else line.dataset.lang = lang;
     editor.setLanguage(engineCode(), lang);
+  };
+
+  const scanGo = text => {
+    const pieces = [];
+    let piece = [], depth = 0, close = null, split = true;
+    for (const line of text.split('\n')) {
+      const go = !close && !depth && line.match(/^\s*go(?:\s+(\d+))?\s*(?:--.*)?$/i);
+      if (go) {
+        if (go[1]) split = false;
+        pieces.push(piece.join('\n'));
+        piece = [];
+        continue;
+      }
+      piece.push(line);
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i], two = line.slice(i, i + 2);
+        if (depth) {
+          if (two === '/*') { depth++; i++; } else if (two === '*/') { depth--; i++; }
+        } else if (close) {
+          if (c === close) { if (line[i + 1] === close) i++; else close = null; }
+        } else if (two === '--') {
+          break;
+        } else if (two === '/*') {
+          depth = 1; i++;
+        } else if (c === "'" || c === '"') {
+          close = c;
+        } else if (c === '[') {
+          close = ']';
+        }
+      }
+    }
+    if (close || depth) return null;
+    pieces.push(piece.join('\n'));
+    return { pieces: pieces.filter(p => p.trim()), split };
+  };
+
+  const PLSQL = /^(declare|begin|create\s+(or\s+replace\s+)?(and\s+(resolve|compile)\s+)?(noforce\s+)?((editionable|noneditionable)\s+)?(function|procedure|package|trigger|type|library|java)|with\s+(function|procedure))\b/i;
+  const SQLPLUS = /^(@|set\s+(?!(transaction|role|constraints?)\b)\w|(col|column|pro|prompt|sho|show|desc|describe|spool|exec|execute|var|variable|def|define|undef|undefine|whenever|rem|remark|start|conn|connect|disc|disconnect|acc|accept|pause|tti|ttitle|bti|btitle|bre|break|comp|compute|cl|clear|ho|host|timing|print|r|run|l|list|sav|save|get|ed|edit|store|repheader|repfooter|startup|shutdown|recover|copy|help)\b)/i;
+
+  const scanSemicolon = text => {
+    const pieces = [];
+    let start = 0, i = 0, close = null, depth = 0, line = false, split = true, plsql = null;
+    const head = () => text.slice(start, i).replace(/^(\s|--[^\n]*|\/\*[\s\S]*?\*\/)*/, '');
+    const end = (to, next = to) => { pieces.push(text.slice(start, to).trim()); start = next; plsql = null; };
+    while (i < text.length) {
+      const c = text[i], two = text.slice(i, i + 2);
+      if (line) { if (c === '\n') line = false; i++; continue; }
+      if (depth) { if (two === '*/') { depth = 0; i += 2; } else i++; continue; }
+      if (close) {
+        if (close.length === 2) { if (two === close) { close = null; i += 2; } else i++; continue; }
+        if (c === close) { if (text[i + 1] === close) { i += 2; continue; } close = null; }
+        i++; continue;
+      }
+      const atLineStart = i === 0 || text[i - 1] === '\n';
+      if (atLineStart && /^[ \t]*\/[ \t]*(\n|$)/.test(text.slice(i))) {
+        if (!head().trim()) split = false;
+        const eol = text.indexOf('\n', i);
+        end(i, eol < 0 ? text.length : eol);
+        i = eol < 0 ? text.length : eol;
+        continue;
+      }
+      if (plsql === null && /\S/.test(c) && two !== '--' && two !== '/*') {
+        const rest = text.slice(i);
+        plsql = PLSQL.test(rest);
+        if (SQLPLUS.test(rest)) split = false;
+      }
+      if (two === '--') { line = true; i += 2; continue; }
+      if (two === '/*') { depth = 1; i += 2; continue; }
+      const q = text.slice(i).match(/^n?q'(.)/i);
+      if (q && !/\w/.test(text[i - 1] ?? '')) {
+        close = ({ '[': ']', '{': '}', '<': '>', '(': ')' }[q[1]] ?? q[1]) + "'";
+        i += q[0].length; continue;
+      }
+      if (c === "'" || c === '"') { close = c; i++; continue; }
+      if (c === ';' && plsql === false) {
+        const comment = text.slice(i + 1).match(/^[ \t]*(--[^\n]*|\/\*[^\n]*?\*\/[ \t]*)?(?=\n|$)/);
+        i += 1 + (comment?.[1] ? comment[0].length : 0);
+        end(i);
+        continue;
+      }
+      i++;
+    }
+    if (close || depth) return null;
+    // a PL/SQL unit with no slash never runs in SQL*Plus
+    const slash = !!plsql;
+    if (head().trim() || !pieces.length) end(text.length);
+    else pieces[pieces.length - 1] += text.slice(start).trimEnd();
+    return { pieces: pieces.filter(p => p.trim()), split, slash };
+  };
+
+  const SCRIPTS = {
+    sqlserver: { scan: scanGo, lang: 'sqlcmd', found: n => `${n} batches separated by GO` },
+    oracle: { scan: scanSemicolon, lang: 'sqlplus', found: n => `${n} statements` },
+  };
+
+  const replaceWith = (line, statements) => {
+    const plus = line.querySelector('.plus:first-child');
+    const template = document.querySelector('template').content.querySelector('textarea');
+    for (const statement of statements) {
+      template.value = statement;
+      plus.click();
+      template.value = '';
+    }
+    line.querySelector('.remove').click();
+  };
+
+  const offer = (line, editor) => {
+    const script = SCRIPTS[engineCode()];
+    const assists = 'assistsSplit' in document.querySelector('.version:not(.hidden)').selectedOptions[0].dataset;
+    const found = script && assists && !line.dataset.lang && script.scan(editor.state.doc.toString());
+    if (!found || (found.split && found.pieces.length < 2)) return;
+    const speaksIt = speaks().includes(script.lang);
+    const split = found.split && found.pieces.length > 1;
+    if (!split && !speaksIt) return;
+    const bar = Object.assign(document.createElement('div'), { className: 'cm-offer' });
+    const button = (text, act) => bar.append(Object.assign(document.createElement('button'), { textContent: text, onclick: () => { editor.setOffer(null); act?.(); } }));
+    bar.append(split ? `${script.found(found.pieces.length)}: ` : 'run as ');
+    if (split) button('split', () => replaceWith(line, found.pieces.map(p => p.replace(/^(\s*\n)+/, '').trimEnd())));
+    if (split && speaksIt) bar.append(' or use ');
+    if (speaksIt) button(languageName(script.lang), () => {
+      if (found.slash) editor.dispatch({ changes: { from: editor.state.doc.length, insert: '\n/' } });
+      setLang(line, editor, script.lang);
+    });
+    if (!split) bar.append('?');
+    button('×');
+    editor.setOffer(bar);
   };
 
   history.replaceState("", document.title, window.location.pathname + window.location.search);
@@ -257,6 +384,13 @@
 
   });
 
+  document.querySelector('main').addEventListener('batchchange', event => setTimeout(() => {
+    const editor = editors.find(e => e.dom === event.target);
+    if (!editor) return;
+    editor.setOffer(null);
+    if (event.detail.paste) offer(event.target.closest('.line'), editor);
+  }));
+
   document.querySelector('main').addEventListener("click", event => {
     const icon = event.target.closest('.icon');
     if(icon) {
@@ -328,19 +462,15 @@
         const seperator = document.getElementById('engine').selectedOptions[0].dataset.separator;
         const statements = editors[index].state.doc.toString().split( (new RegExp(seperator,'im')) ).filter(s => s.trim());
         if(statements.length <= 1) return;
-        let plus = line.querySelector('.plus:first-child');
-        for (const [i,statement] of statements.entries()){
-          document.querySelector('template').content.querySelector('textarea').value = statement.replace(/\s+$/,'').replace(/^\s+/,'')+(seperator===';'?';':'');
-          plus.click();
-          document.querySelector('template').content.querySelector('textarea').value = '';
-        }
-        icon.parentElement.querySelector('.remove').click();
+        replaceWith(line, statements.map(statement => statement.replace(/\s+$/,'').replace(/^\s+/,'')+(seperator===';'?';':'')));
 
         return;
       }
 
     }
   });
+
+  for (const select of document.querySelectorAll('#engine, .version, .sample')) select.addEventListener('change', () => editors.forEach(e => e.setOffer(null)));
 
   document.getElementById('engine').addEventListener("change", event => {
     document.querySelector('.version:not(.hidden)').classList.add('hidden');

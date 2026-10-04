@@ -84,3 +84,6 @@ svg * { stroke-linecap: round; }
 .qp-tr { overflow-y: hidden; }
 .qp-root>svg { z-index: 1; }
 .qp-statement-header { display: none; }
+.cm-offer { padding: 0.2rem 0.3rem; font-size: smaller; background-color: #ffeaa7; }
+.cm-offer>button { font-size: inherit; padding: 0 0.4rem; }
+.cm-offer>button:last-child { float: right; }

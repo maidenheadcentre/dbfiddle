@@ -18,6 +18,7 @@ create table version(
 , version_name text not null
 , version_is_live boolean not null default false
 , version_is_active boolean not null default true
+, version_assists_split boolean not null default true
 , primary key (engine_code,version_code)
 );
 

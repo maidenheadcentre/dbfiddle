@@ -192,7 +192,7 @@ export const handler = async event => {
         <option value="${e.engine_code}" data-separator="${e.engine_separator_regex}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
       <select>${data.engines.reduce((p,e) => /*html*/`${p}
       <select class="version${e.engine_code!==data.engine_code?' hidden':''}" data-engine="${e.engine_code}">${e.versions.reduce((p,v) => /*html*/`${p}
-        <option value="${v.version_code}" data-languages="${v.languages.join(',')}"${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
+        <option value="${v.version_code}" data-languages="${v.languages.join(',')}"${v.version_assists_split?' data-assists-split':''}${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
       </select>`, '')}${data.engines.reduce((p,e) => /*html*/`${p}${e.versions.reduce((p,v) => /*html*/`${p}
       <select class="sample${(e.engine_code!==data.engine_code)||(v.version_code!==data.version_code)?' hidden':''}${(v.samples.length<=1)?' empty':''}" data-engine="${e.engine_code}" data-version="${v.version_code}">${v.samples.reduce((p,c) => /*html*/`${p}
         <option value="${c.sample_name}"${c.sample_name===data.sample_name?' selected':''}>${c.sample_description}</option>`, '')}

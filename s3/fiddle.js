@@ -185,7 +185,7 @@
     }
 
     const remove = [];
-    editors.forEach((e,i) => { if(e.state.doc.toString()==='') remove.push(document.querySelectorAll('.line')[i].querySelector('.icon.remove')) });
+    editors.forEach((e,i) => { if(e.state.doc.toString().trim()==='') remove.push(document.querySelectorAll('.line')[i].querySelector('.icon.remove')) });
     if(remove.length === editors.length) return;
     remove.forEach(e => e.click());
 

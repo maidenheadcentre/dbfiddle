@@ -457,16 +457,6 @@
         return;
       }
 
-      if (icon.classList.contains("split")) {
-
-        const seperator = document.getElementById('engine').selectedOptions[0].dataset.separator;
-        const statements = editors[index].state.doc.toString().split( (new RegExp(seperator,'im')) ).filter(s => s.trim());
-        if(statements.length <= 1) return;
-        replaceWith(line, statements.map(statement => statement.replace(/\s+$/,'').replace(/^\s+/,'')+(seperator===';'?';':'')));
-
-        return;
-      }
-
     }
   });
 

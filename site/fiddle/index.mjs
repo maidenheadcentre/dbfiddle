@@ -43,7 +43,6 @@ export const handler = async event => {
           <div class="controls">
             <div class="icon hamburger"><svg><use href="#hamburger"></use></svg></div>
             <div class="icon remove hidden" title="remove"><svg><use href="#remove"></use></svg></div>
-            <div class="icon split hidden" title="split"><svg><use href="#split"></use></svg></div>
             <div class="icon hide hidden" title="hide"><svg><use href="#hide"></use></svg></div>
             <div class="icon language hidden" title="language"><svg><use href="#language"></use></svg></div>
             <div class="icon render hidden" title="render"><svg><use href="#chart"></use></svg></div>
@@ -136,14 +135,6 @@ export const handler = async event => {
         <line x1="8" y1="11.5" x2="8" y2="6.5" stroke="currentColor" stroke-width="0.5"/>
         <line x1="9.5" y1="11.5" x2="10" y2="6.5" stroke="currentColor" stroke-width="0.5"/>
       </symbol>
-      <symbol id="split" viewBox="0 0 16 16">
-        <title>split</title>
-        <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
-        <line x1="3.5" y1="4.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="7" y1="11.5" x2="12" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="7" y1="4.5" x2="7" y2="11.5" stroke="currentColor" stroke-width="1.5"/>
-      </symbol>
       <symbol id="language" viewBox="0 0 16 16">
         <title>language</title>
         <rect x="0.5" y="0.5" width="15" height="15" ry="3" rx="3" stroke="currentColor" fill-opacity="0"/>
@@ -189,7 +180,7 @@ export const handler = async event => {
     <div>
       <a href="/">db<>fiddle</a>
       <select id="engine">${data.engines.reduce((p,e) => /*html*/`${p}
-        <option value="${e.engine_code}" data-separator="${e.engine_separator_regex}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
+        <option value="${e.engine_code}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
       <select>${data.engines.reduce((p,e) => /*html*/`${p}
       <select class="version${e.engine_code!==data.engine_code?' hidden':''}" data-engine="${e.engine_code}">${e.versions.reduce((p,v) => /*html*/`${p}
         <option value="${v.version_code}" data-languages="${v.languages.join(',')}"${v.version_assists_split?' data-assists-split':''}${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}

@@ -9,7 +9,6 @@ create table engine(
 , engine_name text not null unique
 , engine_test text not null
 , engine_default_version_code text not null
-, engine_separator_regex text not null default ';\s*$'
 );
 
 create table version(

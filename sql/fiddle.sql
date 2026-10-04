@@ -51,7 +51,6 @@ create function get(bytea) returns jsonb as $$
                , (select json_agg(z order by engine_name)
                   from (select engine_code
                              , engine_name
-                             , engine_separator_regex
                              , case when e.engine_code = f.engine_code then f.version_code else engine_default_version_code end engine_version_code
                              , (select json_agg(z order by split_part(version_ordinal,'.',1)::int, nullif(split_part(version_ordinal,'.',2),'')::int, version_name desc)
                                 from (select version_code

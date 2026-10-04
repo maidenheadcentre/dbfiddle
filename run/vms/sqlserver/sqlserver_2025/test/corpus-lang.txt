@@ -31,5 +31,20 @@
 [["import sys\nsys.exit(3)","python"]]
 [["1/0","python"]]
 
+# --- sqlcmd: the runner's logon, sqlcmd's own defaults ---
+[["select 1 as n, 'a' as s, db_name() as d","sqlcmd"]]
+[["select N'café' c, cast(1.5 as decimal(3,1)) d, cast('2024-01-02' as date) dt, cast(null as int) z","sqlcmd"]]
+[["select replicate('x', 300) w","sqlcmd"]]
+[["print 'printed'\ngo\nselect 2 as n\ngo 2","sqlcmd"]]
+[[":setvar v 42\nselect $(v) as v","sqlcmd"]]
+[["select * from no_such_table\ngo\nselect 'still running' s","sqlcmd"]]
+[["raiserror('sev 16', 16, 1)\nraiserror('sev 10', 10, 1)","sqlcmd"]]
+[["exit(select 3)","sqlcmd"]]
+
+# --- sqlcmd shares the database, and commits per statement unless it opens a transaction ---
+["create table t (x int)","insert t values (1)",["select count(*) n from t","sqlcmd"]]
+["create table t (x int)",["insert t values (1)","sqlcmd"],"select count(*) n from t"]
+["create table t (x int)",["begin tran\ninsert t values (1)","sqlcmd"],"select count(*) n from t"]
+
 # --- a language nothing speaks is fenced, not forked ---
 [["console.log(1)","node"]]

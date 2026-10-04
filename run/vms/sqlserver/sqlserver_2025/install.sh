@@ -406,8 +406,8 @@ class Fiddle
                 throw new JsonException("a batch is a string or [text, language]");
         }
 
-        // one budget across all language batches, inside run.sh's 20s: a hung python batch must
-        // still leave time to return a body
+        // one budget across all language batches, inside run.sh's 20s: a hung language batch
+        // must still leave time to return a body
         long deadline = Environment.TickCount64 + 15000;
 
         var ret = new List<string>();
@@ -565,12 +565,18 @@ class Fiddle
         return reader[i].ToString();
     }
 
-    // the recipe gates on this exact path: a wrong one fails every python batch and no SQL
-    // test notices
+    // the recipe gates on these exact paths: a wrong one fails every batch in that language
+    // and no SQL test notices
     const string Python = "/usr/bin/python3";
+    const string Sqlcmd = "/usr/local/bin/sqlcmd";
     const int Cap = 4 << 20;
 
-    static string Interp(string lang) => lang == "python" ? Python : null;
+    // the script's path goes last. The logon is the runner's, never the batch's
+    static readonly Dictionary<string, (string ext, string[] argv)> Langs = new()
+    {
+        ["python"] = (".py", new[] { Python }),
+        ["sqlcmd"] = (".sql", new[] { Sqlcmd, "-S", "localhost", "-U", "sa", "-d", "fiddle", "-i" }),
+    };
 
     // stdout gets a plain fence: Backtick's blockquote is the shape for status and error only
     static string FencePlain(string m)
@@ -583,8 +589,7 @@ class Fiddle
 
     static string LangBatch(string text, string lang, int idx, long deadline)
     {
-        string interp = Interp(lang);
-        if (interp == null)
+        if (!Langs.TryGetValue(lang, out var interp))
             return Backtick("unknown language: " + lang, "error");
         if (Environment.TickCount64 >= deadline)
             return Backtick("not run: an earlier batch used the runner's time budget", "error");
@@ -605,11 +610,11 @@ class Fiddle
     }
 
     // a file, not stdin: python names it in a traceback, so the error says which batch it was
-    static bool RunLangBatch(string text, int idx, string interp, long deadline, out string so, out string se, out int status)
+    static bool RunLangBatch(string text, int idx, (string ext, string[] argv) interp, long deadline, out string so, out string se, out int status)
     {
-        string path = "/tmp/batch" + (idx + 1) + ".py";
+        string path = "/tmp/batch" + (idx + 1) + interp.ext;
         File.WriteAllText(path, text);
-        var psi = new ProcessStartInfo(interp, path)
+        var psi = new ProcessStartInfo(interp.argv[0], interp.argv.Skip(1).Append(path))
         {
             WorkingDirectory = "/tmp",
             UseShellExecute = false,
@@ -617,6 +622,9 @@ class Fiddle
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        // the service has no HOME, and sqlcmd says so on stdout
+        psi.Environment["HOME"] = "/root";
+        psi.Environment["SQLCMDPASSWORD"] = "fiddle";
         using var p = Process.Start(psi);
         // closed at once, so a batch that reads stdin gets EOF rather than the deadline
         p.StandardInput.Close();
@@ -655,6 +663,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y dotnet-s
 COPY fiddle.csproj fiddle.cs /src/
 RUN cd /src && dotnet publish -c Release -o /app
 
+# go-sqlcmd is not in Microsoft's apt repos: take the latest release by its tag
+FROM ubuntu:22.04 AS sqlcmd
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl bzip2
+RUN tag=$(curl -fsSL https://api.github.com/repos/microsoft/go-sqlcmd/releases/latest | grep '"tag_name"' | cut -d'"' -f4) \
+ && test -n "$tag" \
+ && curl -fsSL https://github.com/microsoft/go-sqlcmd/releases/download/$tag/sqlcmd-linux-amd64.tar.bz2 | tar xj -C /usr/local/bin sqlcmd
+
 FROM ubuntu:22.04
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
       systemd systemd-sysv ca-certificates curl gnupg locales tmux vim-tiny \
@@ -668,6 +683,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mssql-se
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip \
  && pip install --no-cache-dir pyodbc \
  && apt-get purge -y python3-pip && apt-get autoremove -y
+COPY --from=sqlcmd /usr/local/bin/sqlcmd /usr/local/bin/sqlcmd
 # Encrypt=no: driver 18 defaults to yes and rejects the instance's self-signed certificate
 RUN printf '[fiddle]\nDriver=ODBC Driver 18 for SQL Server\nServer=localhost\nDatabase=fiddle\nEncrypt=no\n' > /etc/odbc.ini
 RUN python3 -c 'import pyodbc; assert "ODBC Driver 18 for SQL Server" in pyodbc.drivers(), pyodbc.drivers(); assert pyodbc.dataSources().get("fiddle") == "ODBC Driver 18 for SQL Server", pyodbc.dataSources()'
@@ -690,8 +706,9 @@ ENTRYPOINT ["bash"]
 EOF
 
 docker build -t dummy_sqlserver_2025 /mnt/fire/sqlserver_2025/build
-# 2110M: a 2160M build read 126M at the headroom gate below, and the count moves it 1:1
-dd if=/dev/zero bs=1M count=2110 > /mnt/fire/sqlserver_2025/rootfs.ext4
+# 2134M: a 2160M build read 126M at the headroom gate below, the count moves it 1:1, and
+# sqlcmd adds 24M
+dd if=/dev/zero bs=1M count=2134 > /mnt/fire/sqlserver_2025/rootfs.ext4
 mkfs.ext4 -m 0 /mnt/fire/sqlserver_2025/rootfs.ext4
 mount -o loop /mnt/fire/sqlserver_2025/rootfs.ext4 /mnt/fire/sqlserver_2025/mnt
 docker run --rm -i -v /mnt/fire/sqlserver_2025/mnt:/my-rootfs dummy_sqlserver_2025 -s <<"SETUP"
@@ -708,6 +725,7 @@ chmod 755 /mnt/fire/sqlserver_2025/mnt/reseedrng
 
 # fiddle.cs execs this exact path: a wrong one fails every python batch and no SQL test notices
 chroot /mnt/fire/sqlserver_2025/mnt /usr/bin/python3 -c 'import pyodbc' || { echo "ABORT: the rootfs has no working python3 + pyodbc"; exit 1; }
+chroot /mnt/fire/sqlserver_2025/mnt /usr/local/bin/sqlcmd --version || { echo "ABORT: the rootfs has no working sqlcmd"; exit 1; }
 
 # replace docker's bind-mounted network identity with the guest's offline one
 printf '127.0.0.1 localhost fiddle\n::1 localhost\n' > /mnt/fire/sqlserver_2025/mnt/etc/hosts
@@ -765,15 +783,16 @@ echo "CLOCK-AGED to $(date -u +%s)" > /dev/console
 runuser -u mssql -- /opt/mssql/bin/sqlservr > /dev/console 2>&1 &
 until /usr/bin/dotnet /opt/fiddle-app/fiddle.dll ping ; do sleep 0.2 ; done
 echo SQLSERVR-WARM > /dev/console
-# warm-up: pages python and pyodbc into the snapshot. The runner's own newid() draw here is
-# safe only because /reseedrng re-keys CNG on every restore.
+# warm-up: pages python, pyodbc and sqlcmd into the snapshot. The runner's own newid() draw
+# here is safe only because /reseedrng re-keys CNG on every restore.
 cat > /tmp/batches.json <<'JSON'
-[["import pyodbc\nprint(pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle').execute('select 1').fetchone()[0])","python"]]
+[["import pyodbc\nprint(pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle').execute('select 1').fetchone()[0])","python"],
+ ["select 'sqlcmd-warm'","sqlcmd"]]
 JSON
 /usr/bin/dotnet /opt/fiddle-app/fiddle.dll > /dev/console 2>&1
 # printf, not echo: dash's echo expands the JSON's \n and breaks the line the ceremony greps
-printf '%s\n' "warm-up python: $(cat /tmp/output.json)" > /dev/console
-rm -f /tmp/batches.json /tmp/output.json /tmp/batch1.py
+printf '%s\n' "warm-up: $(cat /tmp/output.json)" > /dev/console
+rm -f /tmp/batches.json /tmp/output.json /tmp/batch1.py /tmp/batch2.sql
 # records the CNG bases, and fails the ceremony if a CU moved the table
 /reseedrng --scan /cngbases > /dev/console 2>&1
 sync
@@ -808,7 +827,8 @@ grep -a SQLSERVR-WARM /tmp/fc-snap-sqlserver_2025.log       # must appear, BEFOR
 grep -a 'Kernel command line' /tmp/fc-snap-sqlserver_2025.log | grep -a no-kvmapf   # must match
 grep -a 'Unknown kernel command line parameters' /tmp/fc-snap-sqlserver_2025.log    # must NOT match
 grep -a CLOCK-AGED /tmp/fc-snap-sqlserver_2025.log          # randomness lever 1 ran
-grep -a 'warm-up python: .*\\n1\\n' /tmp/fc-snap-sqlserver_2025.log   # a python batch reached the engine through the DSN
+grep -a 'warm-up: .*\\n1\\n' /tmp/fc-snap-sqlserver_2025.log   # a python batch reached the engine through the DSN
+grep -a 'warm-up: .*\\u0060\\u0060\\u0060\\n *\\n-*\\nsqlcmd-warm' /tmp/fc-snap-sqlserver_2025.log   # ...and a sqlcmd batch, with nothing above its result
 grep -a 'RESEEDRNG: .* states re-keyed' /tmp/fc-snap-sqlserver_2025.log   # lever 2's layout still matches
 grep -a 'RESEEDRNG: .* 0 states re-keyed' /tmp/fc-snap-sqlserver_2025.log && echo 'CEREMONY FAILED: CNG layout no longer matches'
 
@@ -855,6 +875,9 @@ cat > /tmp/sqlserver_2025-langcheck.json <<'JSON'
  ["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nc.execute('insert t values (1)')\nc.commit()","python"],
  ["import pyodbc\nc = pyodbc.connect('DSN=fiddle;UID=sa;PWD=fiddle')\nc.execute('insert t values (2)')","python"],
  "select x from t order by x",
+ ["select 'sqlcmd-sees:' + cast(sum(x) as varchar(9)) from t\ngo\ninsert t values (100)","sqlcmd"],
+ "select sum(x) s from t",
+ ["exit(select 4)","sqlcmd"],
  ["console.log(1)","node"],
  ["import sys\nsys.exit(3)","python"]]
 JSON
@@ -873,4 +896,13 @@ case $lang in *"unknown language: node"*) ;;
 esac
 case $lang in *"exited with status 3"*) ;;
   *) echo "ABORT: a non-zero exit was not reported"; exit 1 ;;
+esac
+case $lang in *sqlcmd-sees:43*) ;;
+  *) echo "ABORT: the sqlcmd batch did not read the engine"; exit 1 ;;
+esac
+case $lang in *"| 143 |"*) ;;
+  *) echo "ABORT: sqlcmd's insert after go was not visible to the next SQL batch"; exit 1 ;;
+esac
+case $lang in *"exited with status 4"*) ;;
+  *) echo "ABORT: sqlcmd's exit status was not reported"; exit 1 ;;
 esac

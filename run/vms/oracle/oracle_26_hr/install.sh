@@ -895,15 +895,6 @@ static int connect_db(void){
                    OCI_DEFAULT) == OCI_SUCCESS;
 }
 
-static void trim_batch(char *s, size_t *len){
-  size_t n = *len;
-  while(n && strchr(" \t\n\r\013", s[n - 1]) && s[n - 1]) n--;
-  if(n && s[n - 1] == '/'){ while(n && s[n - 1] == '/') n--; }
-  else { while(n && s[n - 1] == ';') n--; }
-  s[n] = 0;
-  *len = n;
-}
-
 int main(int argc, char **argv){
   int warmup = argc > 1 && strcmp(argv[1], "--warmup") == 0;
   const char *inpath  = (!warmup && argc > 1) ? argv[1] : "/tmp/batches.json";
@@ -963,8 +954,6 @@ int main(int argc, char **argv){
       sb_free(&md);
       continue;
     }
-    trim_batch(batches[i].s, &batches[i].len);
-
     OCIStmt *stmt = NULL;
     if(batches[i].len == 0){ /* an empty batch yields neither rows nor error */ }
     else if(OCIStmtPrepare2(svc, &stmt, err, (const OraText *)batches[i].s,
@@ -1089,10 +1078,10 @@ cat > /tmp/oracle_26_hr-check.json <<'JSON'
  "select x from t order by x",
  ["select 1 from dual","bash"],
  ["exit 3","sqlplus"],
- "create procedure hello as begin dbms_output.put_line('hello-out'); end;\n/",
- "begin hello; end;\n/",
- "declare c sys_refcursor; begin open c for select 'implicit-ok' r from dual; dbms_sql.return_result(c); end;\n/",
- "create procedure broken as begin x := 1; end;\n/",
+ "create procedure hello as begin dbms_output.put_line('hello-out'); end;",
+ "begin hello; end;",
+ "declare c sys_refcursor; begin open c for select 'implicit-ok' r from dual; dbms_sql.return_result(c); end;",
+ "create procedure broken as begin x := 1; end;",
  "select 'employees:'||count(*) n from employees"]
 JSON
 check=$(/mnt/fire/oracle_26_hr/run.sh < /tmp/oracle_26_hr-check.json) || true

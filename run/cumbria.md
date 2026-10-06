@@ -140,7 +140,7 @@ rm -rf stage current.img.new
 mkdir stage
 curl -fsS --compressed https://dbfiddle.uk/dump > stage/daily.csv
 # 32M is frozen into the runners vmstate
-mke2fs -q -t ext4 -m 0 -d stage current.img.new 32M
+/usr/sbin/mke2fs -q -t ext4 -m 0 -d stage current.img.new 32M
 mv current.img.new current.img
 wc -l < stage/daily.csv
 EOF

@@ -128,6 +128,27 @@ install -m 644 vmlinux-5.10.223 vmlinux-6.1.141 /mnt/fire/
 cd / && rm -r $t
 ```
 
+# fiddlestats
+```sh
+mkdir -p /mnt/fire/fiddlestats
+cat > /mnt/fire/fiddlestats/sync.sh <<"EOF"
+#!/bin/bash
+set -euo pipefail
+cd /mnt/fire/fiddlestats
+date
+rm -rf stage current.img.new
+mkdir stage
+curl -fsS --compressed https://dbfiddle.uk/dump > stage/daily.csv
+# 32M is frozen into the runners vmstate
+mke2fs -q -t ext4 -m 0 -d stage current.img.new 32M
+mv current.img.new current.img
+wc -l < stage/daily.csv
+EOF
+chmod 700 /mnt/fire/fiddlestats/sync.sh
+echo '0 1 * * * root /mnt/fire/fiddlestats/sync.sh >> /var/log/fiddlestats.log 2>&1' > /etc/cron.d/fiddlestats
+/mnt/fire/fiddlestats/sync.sh
+```
+
 # apache/php
 ```sh
 apt install apache2 php php-cli

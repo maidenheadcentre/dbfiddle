@@ -2,26 +2,6 @@ echo 'www-data        ALL=(ALL) NOPASSWD: /mnt/fire/postgres_19_fiddle/run.sh' >
 zfs create tank/fire/postgres_19_fiddle
 cp /mnt/fire/vmlinux-5.10.223 /mnt/fire/postgres_19_fiddle/vmlinux.bin
 
-# 32M is frozen into vmstate as the guest's virtio-blk capacity: never change it without a
-# new ceremony. 01:00 host time is Europe/London, like the fiddle DB's current_date, so the
-# dump ends at yesterday.
-mkdir -p /mnt/fire/fiddlestats
-<<'EOF' cat > /mnt/fire/fiddlestats/sync.sh
-#!/bin/bash
-set -euo pipefail
-cd /mnt/fire/fiddlestats
-date
-rm -rf stage current.img.new
-mkdir stage
-curl -fsS --compressed https://dbfiddle.uk/dump > stage/daily.csv
-mke2fs -q -t ext4 -m 0 -d stage current.img.new 32M
-mv current.img.new current.img
-wc -l < stage/daily.csv
-EOF
-chmod 700 /mnt/fire/fiddlestats/sync.sh
-echo '0 1 * * * root /mnt/fire/fiddlestats/sync.sh >> /var/log/fiddlestats.log 2>&1' > /etc/cron.d/fiddlestats
-/mnt/fire/fiddlestats/sync.sh
-
 <<'EOF' cat > /mnt/fire/postgres_19_fiddle/config.json
 {
   "boot-source": {

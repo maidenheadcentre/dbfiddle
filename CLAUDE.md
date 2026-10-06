@@ -89,7 +89,8 @@ A sample route is a separate engine, not a flag: `type`+`sample` resolves to the
 `<type>_<sample>`, with its own recipe, dataset and sudoers line.
 
 `run.sh` copies `/mnt/fire/fiddlestats/current.img` into the chroot of any engine whose
-dataset has a `fiddlestats/` directory.
+dataset has a `fiddlestats/` directory. The image is built nightly by the sync in
+`run/cumbria.md`, which is host config. A `_fiddle` recipe assumes it is already there.
 
 Nothing runs on KVM. Everything is firecracker.
 

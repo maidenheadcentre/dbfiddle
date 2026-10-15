@@ -131,11 +131,12 @@
 
   const scanGo = text => {
     const pieces = [];
-    let piece = [], depth = 0, close = null, split = true;
+    let piece = [], depth = 0, close = null, split = true, terminated = false;
     for (const line of text.split('\n')) {
       const go = !close && !depth && line.match(/^\s*go(?:\s+(\d+))?\s*(?:--.*)?$/i);
       if (go) {
         if (go[1]) split = false;
+        if (piece.some(l => l.trim())) terminated = true;
         pieces.push(piece.join('\n'));
         piece = [];
         continue;
@@ -160,7 +161,7 @@
     }
     if (close || depth) return null;
     pieces.push(piece.join('\n'));
-    return { pieces: pieces.filter(p => p.trim()), split };
+    return { pieces: pieces.filter(p => p.trim()), split, terminated };
   };
 
   const PLSQL = /^(declare|begin|create\s+(or\s+replace\s+)?(and\s+(resolve|compile)\s+)?(noforce\s+)?((editionable|noneditionable)\s+)?(function|procedure|package|trigger|type|library|java)|with\s+(function|procedure))\b/i;
@@ -168,7 +169,7 @@
 
   const scanSemicolon = text => {
     const pieces = [];
-    let start = 0, i = 0, close = null, depth = 0, line = false, split = true, plsql = null;
+    let start = 0, i = 0, close = null, depth = 0, line = false, split = true, plsql = null, terminated = false;
     const head = () => text.slice(start, i).replace(/^(\s|--[^\n]*|\/\*[\s\S]*?\*\/)*/, '');
     const end = (to, next = to) => { pieces.push(text.slice(start, to).trim()); start = next; plsql = null; };
     while (i < text.length) {
@@ -182,7 +183,7 @@
       }
       const atLineStart = i === 0 || text[i - 1] === '\n';
       if (atLineStart && /^[ \t]*\/[ \t]*(\n|$)/.test(text.slice(i))) {
-        if (!head().trim()) split = false;
+        if (!head().trim() && !pieces.length) split = false; else terminated = true;
         const eol = text.indexOf('\n', i);
         end(i, eol < 0 ? text.length : eol);
         i = eol < 0 ? text.length : eol;
@@ -214,12 +215,12 @@
     const slash = !!plsql;
     if (head().trim() || !pieces.length) end(text.length);
     else pieces[pieces.length - 1] += text.slice(start).trimEnd();
-    return { pieces: pieces.filter(p => p.trim()), split, slash };
+    return { pieces: pieces.filter(p => p.trim()), split, slash, terminated };
   };
 
   const SCRIPTS = {
-    sqlserver: { scan: scanGo, lang: 'sqlcmd', found: n => `${n} batches separated by GO` },
-    oracle: { scan: scanSemicolon, lang: 'sqlplus', found: n => `${n} statements` },
+    sqlserver: { scan: scanGo, lang: 'sqlcmd', found: n => n > 1 ? `${n} batches separated by GO` : 'GO terminator found' },
+    oracle: { scan: scanSemicolon, lang: 'sqlplus', found: n => n > 1 ? `${n} statements` : '/ terminator found' },
   };
 
   const replaceWith = (line, statements) => {
@@ -237,14 +238,16 @@
     const script = SCRIPTS[engineCode()];
     const assists = 'assistsSplit' in document.querySelector('.version:not(.hidden)').selectedOptions[0].dataset;
     const found = script && assists && !line.dataset.lang && script.scan(editor.state.doc.toString());
-    if (!found || (found.split && found.pieces.length < 2)) return;
+    if (!found) return;
+    const one = found.pieces.length === 1 && found.terminated;
+    const split = found.split && (found.pieces.length > 1 || one);
+    if (found.split && !split) return;
     const speaksIt = speaks().includes(script.lang);
-    const split = found.split && found.pieces.length > 1;
     if (!split && !speaksIt) return;
     const bar = Object.assign(document.createElement('div'), { className: 'cm-offer' });
     const button = (text, act) => bar.append(Object.assign(document.createElement('button'), { textContent: text, onclick: () => { editor.setOffer(null); act?.(); } }));
     bar.append(split ? `${script.found(found.pieces.length)}: ` : 'run as ');
-    if (split) button('split', () => replaceWith(line, found.pieces.map(p => p.replace(/^(\s*\n)+/, '').trimEnd())));
+    if (split) button(one ? 'remove' : 'split', () => replaceWith(line, found.pieces.map(p => p.replace(/^(\s*\n)+/, '').trimEnd())));
     if (split && speaksIt) bar.append(' or use ');
     if (speaksIt) button(languageName(script.lang), () => {
       if (found.slash) editor.dispatch({ changes: { from: editor.state.doc.length, insert: '\n/' } });

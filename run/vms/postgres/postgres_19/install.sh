@@ -146,6 +146,7 @@ echo "deb https://apt.postgresql.org/pub/repos/apt trixie-pgdg main 19" > /etc/a
 wget --quiet -O /etc/apt/trusted.gpg.d/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
 apt-get update
 apt-get -y install postgresql-19 postgresql-19-postgis-3 postgresql-19-pgrouting postgresql-plpython3-19
+apt-get -y install --no-install-recommends python3 python3-psycopg
 <<'EOF' cat > /etc/postgresql/19/main/pg_ident.conf
 # MAPNAME     SYSTEM-USERNAME   PG-USERNAME
 map           postgres          postgres
@@ -203,7 +204,7 @@ EODOCKER
 DOCKER_BUILDKIT=1 docker build --no-cache -t dummy_postgres_19 - < /mnt/fire/postgres_19/DOCKERFILE
 #docker run --rm -ti dummy_postgres_19
 # re-derive count= from what the gate after the ceremony prints, never from du in the builder container
-dd if=/dev/zero bs=1M count=1145 > /mnt/fire/postgres_19/rootfs.ext4
+dd if=/dev/zero bs=1M count=1180 > /mnt/fire/postgres_19/rootfs.ext4
 mkfs.ext4 -m 0 /mnt/fire/postgres_19/rootfs.ext4
 mount -o loop /mnt/fire/postgres_19/rootfs.ext4 /mnt/fire/postgres_19/mnt
 docker run --rm -ti -v /mnt/fire/postgres_19/mnt:/my-rootfs dummy_postgres_19
@@ -217,8 +218,9 @@ cat <<"EOF" > /mnt/fire/postgres_19/mnt/fiddle.sh
 dd if=/dev/random count=1 bs=1
 until [ -S /var/run/postgresql/.s.PGSQL.5432 ] ; do sleep 0.1 ; done
 until /usr/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1 ; do sleep 0.05 ; done
-echo '["select 1"]' > /tmp/warm.json
-echo "warm-up: $(/fiddle /tmp/warm.json /tmp/warm.out >/dev/null 2>&1; cat /tmp/warm.out)" > /dev/console 2>&1
+printf '%s\n' '[["select 1",""],["import psycopg\nprint(psycopg.connect().execute(\"select 1\").fetchone()[0])","python"]]' > /tmp/warm.json
+printf 'warm-up: %s\n' "$(/fiddle /tmp/warm.json /tmp/warm.out >/dev/null 2>&1; cat /tmp/warm.out)" > /dev/console 2>&1
+rm -f /src/batch*.py
 sync
 /vsock serve > /data/batches.json
 until /usr/bin/pg_isready -h localhost -p 5432 ; do sleep 0.05 ; done
@@ -541,7 +543,7 @@ static void fence_trimmed(sbuf *out, const char *s, const char *label){
 
 static void drop_notice(void *arg, const char *msg){ (void)arg; (void)msg; }
 
-/* ---- c and bash batches ---- */
+/* ---- c, bash and python batches ---- */
 
 /* the cwd, and where a c batch's source goes, so its #include "x.h" finds a header a bash
    batch wrote there */
@@ -549,6 +551,9 @@ static void drop_notice(void *arg, const char *msg){ (void)arg; (void)msg; }
 
 /* must match data_directory in postgresql.conf, above */
 #define PGDATA "/var/lib/postgresql/19/main"
+
+#define SEARCH_PATH "public,x_tablefunc,x_pg_trgm,x_intarray,x_hstore,x_tsm_system_rows," \
+                    "x_unaccent,x_ltree,x_postgis"
 
 #define CAP (4L << 20)
 
@@ -595,6 +600,8 @@ static int run_child(char *const argv[], sbuf *so, sbuf *se, int *status, long d
     dup2(nul, 0); dup2(op[1], 1); dup2(ep[1], 2);
     close(op[0]); close(op[1]); close(ep[0]); close(ep[1]);
     if(chdir(SRCDIR) != 0) _exit(126);
+    setenv("PGUSER", "postgres", 1);
+    setenv("PGOPTIONS", "-c search_path=" SEARCH_PATH, 1);
     execv(argv[0], argv);
     _exit(127);
   }
@@ -681,15 +688,16 @@ static void run_lang(sbuf *md, const char *lang, const batch *b, size_t i,
     return;
   }
 
-  if(!strcmp(lang, "bash")){
+  if(!strcmp(lang, "bash") || !strcmp(lang, "python")){
+    int py = lang[0] == 'p';
     /* named for its batch, so bash's own "batch3.sh: line 2" says which one failed */
-    snprintf(path, sizeof path, SRCDIR "/batch%zu.sh", i + 1);
+    snprintf(path, sizeof path, SRCDIR "/batch%zu.%s", i + 1, py ? "py" : "sh");
     if(!write_text(path, b->s, b->len)){
       const char *m = "could not write the script";
       fence_block(md, m, strlen(m), "error");
       return;
     }
-    char *argv[] = { "/bin/bash", path, NULL };
+    char *argv[] = { py ? "/usr/bin/python3" : "/bin/bash", path, NULL };
     fence_child(md, argv, deadline);
     return;
   }
@@ -794,8 +802,7 @@ int main(int argc, char **argv){
     return 1;
   }
   PQsetNoticeProcessor(conn, drop_notice, NULL);
-  PQclear(PQexec(conn, "set search_path to public,x_tablefunc,x_pg_trgm,x_intarray,"
-                       "x_hstore,x_tsm_system_rows,x_unaccent,x_ltree,x_postgis;"));
+  PQclear(PQexec(conn, "set search_path to " SEARCH_PATH));
 
   mkdir(SRCDIR, 0700);
   long deadline = now_ms() + LANG_MS;
@@ -915,7 +922,9 @@ cat > /tmp/postgres_19-langcheck.json <<'EOF'
 [["#include \"postgres.h\"\n#include \"fmgr.h\"\n#include \"varatt.h\"\nPG_MODULE_MAGIC;\nPG_FUNCTION_INFO_V1(fiddle_answer);\nDatum fiddle_answer(PG_FUNCTION_ARGS){ PG_RETURN_INT32(42); }","c"],
  ["create function fiddle_answer() returns int as 'fiddle.1', 'fiddle_answer' language c strict;",""],
  ["select fiddle_answer() as c_sees;",""],
- ["cat > Makefile <<'MK'\nMODULES = gate\nPG_CONFIG = pg_config\nPGXS := $(shell $(PG_CONFIG) --pgxs)\ninclude $(PGXS)\nMK\ncp fiddle.1.c gate.c\nmake -s && echo bash-built:$(ls gate.so)","bash"]]
+ ["cat > Makefile <<'MK'\nMODULES = gate\nPG_CONFIG = pg_config\nPGXS := $(shell $(PG_CONFIG) --pgxs)\ninclude $(PGXS)\nMK\ncp fiddle.1.c gate.c\nmake -s && echo bash-built:$(ls gate.so)","bash"],
+ ["create schema x_ltree; create table x_ltree.on_path as select 'path' v;",""],
+ ["import psycopg\nwith psycopg.connect() as c:\n    print('py-sees:%s %s' % c.execute('select fiddle_answer(), v from on_path').fetchone())","python"]]
 EOF
 lang=$(/mnt/fire/postgres_19/run.sh < /tmp/postgres_19-langcheck.json) || true
 printf '%s\n' "$lang"
@@ -927,6 +936,9 @@ case $lang in *"| 42 |"*) ;;
 esac
 case $lang in *bash-built:gate.so*) ;;
   *) echo "ABORT: the bash batch did not build a module through PGXS make"; exit 1 ;;
+esac
+case $lang in *"py-sees:42 path"*) ;;
+  *) echo "ABORT: the python batch did not reach the SQL batches' database and search_path"; exit 1 ;;
 esac
 
 cat > /tmp/postgres_19-crashcheck.json <<'EOF'

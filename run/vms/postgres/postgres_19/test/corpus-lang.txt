@@ -1,0 +1,57 @@
+# nothing volatile: no random, time, pid or server version
+# the traceback case stays a single-batch line: its script path /src/batch<N>.py names the batch
+
+# --- the language runs at all ---
+[["print(6*7)","python"]]
+
+# --- a string element is still SQL, and elements may be mixed ---
+[["select 1 as sql_pair",""]]
+["select 1 as plain",["print(2)","python"],"select 3 as plain_again"]
+
+# --- PGUSER and PGOPTIONS: a bare connection gets the SQL batches' role, database and search_path ---
+[["import psycopg\nwith psycopg.connect() as c:\n    print(c.execute('select current_user, current_database()').fetchone())","python"]]
+[["import psycopg\nwith psycopg.connect() as c:\n    print(c.execute('show search_path').fetchone()[0])","python"]]
+["create schema x_ltree; create table x_ltree.on_path as select 'found through search_path' v",["import psycopg\nwith psycopg.connect() as c:\n    print(c.execute('select v from on_path').fetchone()[0])","python"]]
+[["psql -Atc \"select current_user, current_setting('search_path')\"","bash"]]
+
+# --- SQL creates, the language reads ---
+["create table t as select 42 x",["import psycopg\nwith psycopg.connect() as c:\n    print(c.execute('select x from t').fetchone()[0])","python"]]
+[["import psycopg\nwith psycopg.connect() as c:\n    print(c.execute(\"select 1.5::numeric, 'café', null, array[1,2], '{\\\"a\\\": 1}'::jsonb\").fetchone())","python"]]
+
+# --- the language writes: psycopg's default is not autocommit, so the user commits ---
+["create table t (x int)",["import psycopg\nc = psycopg.connect()\nc.execute('insert into t values (7)')\nc.commit()","python"],"select * from t"]
+["create table t (x int)",["import psycopg\nc = psycopg.connect()\nc.execute('insert into t values (7)')","python"],"select count(*) n from t"]
+["create table t (x int)",["import psycopg\nwith psycopg.connect() as c:\n    c.execute('insert into t values (8)')","python"],"select * from t"]
+["create table t (x int)",["import psycopg\nc = psycopg.connect(autocommit=True)\nc.execute('insert into t values (9)')","python"],"select * from t"]
+
+# --- a connection is a connection: a SQL batch's temp table and open transaction are the runner's ---
+["create temp table tt as select 1 x",["import psycopg\ntry:\n    psycopg.connect().execute('select * from tt')\nexcept psycopg.errors.UndefinedTable as e:\n    print(e.sqlstate, e.diag.message_primary)","python"],"select * from tt"]
+["create table t (x int)","begin; insert into t values (1)",["import psycopg\nprint(psycopg.connect().execute('select count(*) from t').fetchone()[0])","python"],"commit; select count(*) n from t"]
+
+# --- an engine error reaches the language as a psycopg exception ---
+[["import psycopg\ntry:\n    psycopg.connect().execute('select nosuch')\nexcept psycopg.errors.UndefinedColumn as e:\n    print(e.sqlstate, e.diag.message_primary)","python"]]
+
+# --- the languages share /src: python imports what a bash batch wrote ---
+[["printf 'def answer():\\n    return 42\\n' > helper.py","bash"],["import helper\nprint(helper.answer())","python"]]
+
+# --- one process per batch: nothing carries over ---
+[["x = 1","python"],["print('x' in dir())","python"]]
+
+# --- stdout is a plain fence and widens past backticks; stderr and a non-zero exit are error fences ---
+[["print('```')","python"]]
+[["print('café 日本語 🐦')","python"]]
+[["import sys\nsys.stdout.write('no trailing newline')","python"]]
+[["import sys\nsys.stderr.write('to stderr\\n')","python"]]
+[["pass","python"]]
+[["import sys\nsys.exit(3)","python"]]
+[["1/0","python"]]
+
+# --- c and bash ---
+[["#include \"postgres.h\"\n#include \"fmgr.h\"\nPG_MODULE_MAGIC;\nPG_FUNCTION_INFO_V1(answer);\nDatum answer(PG_FUNCTION_ARGS){ PG_RETURN_INT32(42); }","c"],["create function answer() returns int as 'fiddle.1', 'answer' language c strict; select answer();",""]]
+[["int main( {","c"]]
+[["echo hello from bash; pwd","bash"]]
+[["echo to stderr >&2; exit 3","bash"]]
+
+# --- a language nothing speaks is fenced, and only its own batch ---
+[["select 1 as before",""],["print(1)","node"],["select 2 as after",""]]
+[["print(1)","PYTHON"]]

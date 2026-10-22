@@ -1,0 +1,56 @@
+# nothing volatile: no version(), current_date, now(), random(), uuid(), gen_random_uuid() or
+# pragma database_list
+# SQL only: pair-form lines go in corpus-lang.txt, so this file runs on any duckdb build
+
+# --- the default fiddle's own batches ---
+["from range(5) select range as n, range * range as square"]
+["select [1,2,3] as list, {'name': 'ann', 'tags': ['sql','db']} as record, list_transform([1,2,3], x -> x * 2) as doubled"]
+["create table sale (region varchar, amount int)","insert into sale values ('north',10),('north',7),('south',9)","select region, sum(amount) as total from sale group by all order by all"]
+["create table t (id int primary key, v int)","insert into t values (1,1)","merge into t using (select 1 as id, 9 as v) s on t.id = s.id when matched then update set v = s.v","select * from t"]
+
+# --- nested and exotic types through Value::ToString ---
+["select [] as empty_list, [[1,2],[3]] as nested_list"]
+["select {'a': {'b': [1,2]}} as deep"]
+["select map([1,2],['one','two']) as m"]
+["select union_value(num := 2) as u"]
+["select [1,null,3] as list_with_null"]
+["select {'a': null} as struct_with_null"]
+["select 'a'::blob as b, '\\x00\\x01'::blob as nul_bytes"]
+["select interval 1 day as i, date '2026-01-31' as d, timestamp '2026-01-31 12:00:00' as ts"]
+["select 1.5::decimal(10,4) as dec, (2::int128) as big, 1e308 as huge"]
+["select cast('nan' as double) as nan, cast('inf' as double) as inf, -cast('inf' as double) as ninf"]
+
+# --- nulls and alignment: numeric right, text left ---
+["select null as n"]
+["select 1 as num, 'text' as txt, true as b, null as nul"]
+["select * from (values (1,'a'),(null,null),(3,'ccc')) t(n,s)"]
+
+# --- md_cell escaping: pipes, backticks, underscores, brackets, leading space, newline, tab ---
+["select 'a|b' as pipe, 'a`b' as tick, 'a_b' as under, 'a[b]' as bracket"]
+["select '  leading' as spaces, 'line1' || chr(10) || 'line2' as newline"]
+["select 'a' || chr(9) || 'b' as tab, chr(9) as tab_only"]
+["select '*bold*' as star, 'a/b' as slash, 'a&b' as amp, 'a<b>' as angle"]
+["select '```' as three_ticks, '`````' as five_ticks"]
+["select 'café' as accented, '日本語' as japanese, '🐦' as astral"]
+
+# --- column names go through the same cell path ---
+["select 1 as \"a|b\", 2 as \"a`b\", 3 as \"  spaced\""]
+
+# --- errors: parse, resolution, runtime, and constraint ---
+["select from where"]
+["select * from no_such_table"]
+["select 1/0 as div"]
+["create table u (k int primary key)","insert into u values (1)","insert into u values (1)"]
+["select cast('abc' as int) as bad"]
+
+# --- statement shapes: DDL silence, multi-statement, empty ---
+["create table silent (x int)"]
+["create table m (x int); insert into m values (1); select * from m"]
+[""]
+[]
+["select 1","","select 2"]
+
+# --- wide and long output ---
+["from range(50) select range as n"]
+["select repeat('x',500) as long_cell"]
+["from range(30) select range as a, range as b, range as c, range as d, range as e"]

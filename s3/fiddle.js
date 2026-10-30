@@ -84,7 +84,7 @@
     const name = line.dataset.render;
     const token = line.painting = {};
     if (!name || output.children.length === 0) return;
-    const code = 'lang' in line.dataset;
+    const code = line.dataset.lang !== native();
     const source = code ? stdout(output) : single(output);
     const figure = Object.assign(document.createElement('div'), { className: 'figure' });
     figure.append(Object.assign(document.createElement('div'), { className: 'renderer', textContent: name }));

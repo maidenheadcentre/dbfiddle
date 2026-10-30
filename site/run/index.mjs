@@ -37,7 +37,7 @@ export const handler = async (event) => {
                 , array(select jsonb_array_elements(${result}))
                 , ${event.requestContext.http.sourceIp}
                 , ${event.headers?.['user-agent']}
-                , array(select case when jsonb_typeof(el)='array' then el->>1 else '' end
+                , array(select case when jsonb_typeof(el)='array' then el->>1 end
                         from elems order by ord))`.values();
     return { statusCode: 200, headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Link': '</llms.txt>; rel="describedby"' }, body: data.toString('base64url') };
   } catch {

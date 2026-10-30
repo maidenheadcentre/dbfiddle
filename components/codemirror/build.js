@@ -12,7 +12,7 @@ import { php } from '@codemirror/lang-php';
 import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } from '@codemirror/lang-sql';
 
-const languageExtension = (engine,lang) => [
+const languageExtension = (engine,lang,native) => [
     (lang === 'node') ? javascript()
   : (lang === 'mongosh') ? javascript()
   : (lang === 'python') ? python()
@@ -26,7 +26,7 @@ const languageExtension = (engine,lang) => [
                  : (engine === 'sqlite') ? SQLite
                  : (engine === 'oracle') ? PLSQL
                  : StandardSQL }),
-  showPanel.of((!lang || lang === 'sql') ? null : () => {
+  showPanel.of((lang === native) ? null : () => {
     const dom = document.createElement('div');
     dom.className = 'cm-lang';
     dom.textContent = JSON.parse(document.querySelector('main').dataset.languages)[lang] ?? lang;
@@ -34,7 +34,7 @@ const languageExtension = (engine,lang) => [
   }),
 ];
 
-const editorFromTextArea = (textarea,engine,lang) => {
+const editorFromTextArea = (textarea,engine,lang,native) => {
   let language = new Compartment;
   let editable = new Compartment;
   let offer = new Compartment;
@@ -54,7 +54,7 @@ const editorFromTextArea = (textarea,engine,lang) => {
     crosshairCursor(),
     highlightActiveLine(),
     highlightSelectionMatches(),
-    language.of(languageExtension(engine,lang)),
+    language.of(languageExtension(engine,lang,native)),
     editable.of(EditorState.readOnly.of(false)),
     offer.of([]),
     keymap.of([
@@ -82,7 +82,7 @@ const editorFromTextArea = (textarea,engine,lang) => {
     }),
   ] });
   view.setEditable = b => view.dispatch({ effects: editable.reconfigure(EditorState.readOnly.of(!b)) });
-  view.setLanguage = (engine,lang) => view.dispatch({ effects: language.reconfigure(languageExtension(engine,lang)) });
+  view.setLanguage = (engine,lang,native) => view.dispatch({ effects: language.reconfigure(languageExtension(engine,lang,native)) });
   view.setOffer = dom => {
     if(!dom && !offered) return;
     offered = dom;

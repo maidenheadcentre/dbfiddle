@@ -9,6 +9,7 @@ create table engine(
 , engine_name text not null unique
 , engine_test text not null
 , engine_default_version_code text not null
+, engine_language_code text not null default 'sql'
 );
 
 create table version(
@@ -32,6 +33,8 @@ create table language(
   language_code text primary key
 , language_name text not null unique
 );
+
+alter table engine add foreign key (engine_language_code) references language;
 
 create table speaks(
   engine_code text

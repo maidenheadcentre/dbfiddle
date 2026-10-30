@@ -5,8 +5,8 @@
   const hashVals = window.location.hash ? window.location.hash.substring(1).split('.') : null;
 
   const engineCode = () => document.getElementById('engine').value;
-  // 'sql' is the wire spelling of "no data-lang", never a value the runners see
-  const speaks = () => (document.querySelector('.version:not(.hidden)').selectedOptions[0]?.dataset.languages ?? 'sql').split(',');
+  const native = () => document.getElementById('engine').selectedOptions[0].dataset.native;
+  const speaks = () => (document.querySelector('.version:not(.hidden)').selectedOptions[0]?.dataset.languages ?? native()).split(',');
   const languageName = code => JSON.parse(document.querySelector('main').dataset.languages)[code] ?? code;
   const gate = () => document.querySelector('main').classList.toggle('multilingual', speaks().length > 1);
 
@@ -124,9 +124,9 @@
   };
 
   const setLang = (line, editor, lang) => {
-    if((line.dataset.lang ?? 'sql') !== lang) document.getElementById('markdown').disabled = true;
-    if(lang === 'sql') delete line.dataset.lang; else line.dataset.lang = lang;
-    editor.setLanguage(engineCode(), lang);
+    if(line.dataset.lang !== lang) document.getElementById('markdown').disabled = true;
+    line.dataset.lang = lang;
+    editor.setLanguage(engineCode(), lang, native());
   };
 
   const scanGo = text => {
@@ -237,7 +237,7 @@
   const offer = (line, editor) => {
     const script = SCRIPTS[engineCode()];
     const assists = 'assistsSplit' in document.querySelector('.version:not(.hidden)').selectedOptions[0].dataset;
-    const found = script && assists && !line.dataset.lang && script.scan(editor.state.doc.toString());
+    const found = script && assists && line.dataset.lang === native() && script.scan(editor.state.doc.toString());
     if (!found) return;
     const one = found.pieces.length === 1 && found.terminated;
     const split = found.split && (found.pieces.length > 1 || one);
@@ -261,7 +261,7 @@
   history.replaceState("", document.title, window.location.pathname + window.location.search);
 
   for (const textarea of document.querySelectorAll('textarea')) {
-    editors.push(cm.editorFromTextArea(textarea, engineCode(), textarea.closest('.line').dataset.lang));
+    editors.push(cm.editorFromTextArea(textarea, engineCode(), textarea.closest('.line').dataset.lang, native()));
   }
 
   gate();
@@ -328,10 +328,10 @@
     for (const [index, editor] of editors.entries()){
       editor.setEditable(false);
       batches.push(editor.state.doc.toString());
-      langs.push(lines[index]?.dataset.lang ?? '');
+      langs.push(lines[index]?.dataset.lang);
       if(editor.dom.classList.contains('cm-focused')) hash = `#${index}.${editor.state.selection.ranges[0].from}`;
     }
-    const payload = langs.some(l => l) ? batches.map((b,i) => [b, langs[i]]) : batches;
+    const payload = batches.map((b,i) => langs[i] === native() ? b : [b, langs[i]]);
 
     let query = '?engine=' + document.getElementById('engine').value + '&version=' + document.querySelector('.version:not(.hidden)').value;
     const sampleElement = document.querySelector('.sample:not(.hidden)');
@@ -407,7 +407,8 @@
 
       if (icon.classList.contains("plus")) {
         const clone = document.querySelector('template').content.cloneNode(true);
-        const editor = cm.editorFromTextArea(clone.querySelector('textarea'),engineCode());
+        clone.querySelector('.line').dataset.lang = native();
+        const editor = cm.editorFromTextArea(clone.querySelector('textarea'),engineCode(),native(),native());
         if(icon.nextElementSibling){
           line.before(clone);
           editors.splice(index,0,editor);
@@ -435,7 +436,7 @@
 
       if (icon.classList.contains("language")) {
         const languages = speaks();
-        setLang(line, editors[index], languages[(languages.indexOf(line.dataset.lang ?? 'sql') + 1) % languages.length]);
+        setLang(line, editors[index], languages[(languages.indexOf(line.dataset.lang) + 1) % languages.length]);
         return;
       }
 
@@ -478,8 +479,8 @@
       for (const s of document.querySelectorAll(`.sample[data-engine="${v.dataset.engine}"][data-version="${event.target.value}"]`)) s.classList.remove('hidden');
       gate();
       document.querySelectorAll('.line').forEach((line,i) => {
-        const lang = line.dataset.lang ?? 'sql';
-        setLang(line, editors[i], speaks().includes(lang) ? lang : 'sql');
+        const lang = line.dataset.lang;
+        setLang(line, editors[i], speaks().includes(lang) ? lang : native());
       });
       delete runButton.dataset.replacement;
       runButton.querySelector('span').textContent = 'run';

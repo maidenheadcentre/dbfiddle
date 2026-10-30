@@ -35,9 +35,9 @@ export const handler = async event => {
   const showplan = (data.fiddle_output ?? []).some(o => (typeof o === 'string') && o.includes('Microsoft SQL Server 2005 XML Showplan'));
   const hide = (+event.queryStringParameters?.hide ?? 0).toString(2).padStart(data.fiddle_input.length,'0').split('').map(b => b === "1");
   const render = (event.queryStringParameters?.render ?? '').split(',').map(r => Object.hasOwn(RENDERERS, r) ? r : '');
-  const batch = (input = '', output = '', index = null, lang = '') => {
+  const batch = (input = '', output = '', index = null, lang = data.engine_language_code) => {
     return /*html*/`
-      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}"${lang ? ` data-lang="${lang}"` : ''}${(index !== null && render[index]) ? ` data-render="${render[index]}"` : ''}>
+      <div class="line${(index !== null && hide[index]) ? ' hide' : ''}" data-lang="${lang}"${(index !== null && render[index]) ? ` data-render="${render[index]}"` : ''}>
         <div class="icon plus" title="add"><svg><use href="#plus"></use></svg></div>
         <div class="batch">
           <div class="controls">
@@ -48,7 +48,7 @@ export const handler = async event => {
             <div class="icon render hidden" title="render"><svg><use href="#chart"></use></svg></div>
           </div>
           <div class="io">
-            <div class="input" data-markdown="${backtickWrapPre(lang || 'sql',input.replaceAll('&','&amp;').replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
+            <div class="input" data-markdown="${backtickWrapPre(lang,input.replaceAll('&','&amp;').replaceAll('"','&quot;'))}"><textarea>${input.replaceAll('&','&amp;').replaceAll('<','&lt;')}</textarea></div>
             <div class="output" data-markdown="${output.replaceAll('&','&amp;').replaceAll('"','&quot;')}">${(output !== '') ? md.render(output) : ''}</div>
           </div>
         </div>
@@ -60,7 +60,7 @@ export const handler = async event => {
   const origin = `https://${event.requestContext.domainName}`;
 
   if( accepts(event.headers?.accept).includes('text/markdown') ){
-    const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre(data?.fiddle_lang?.[i] || 'sql',c)}${data?.fiddle_output?.[i] ?? ''}`, '')
+    const markdown = data.fiddle_input.reduce((p,c,i) => `${p}${backtickWrapPre(data.fiddle_lang[i],c)}${data?.fiddle_output?.[i] ?? ''}`, '')
                    + `[fiddle](${origin}/${event.pathParameters.code})\n`;
     const headers = {
       'Content-Type': 'text/markdown; charset=UTF-8',
@@ -80,7 +80,7 @@ export const handler = async event => {
 
   const banner = !data.example ? '' : /*html*/`
       <div id="banner">${data.version_languages
-          ? `${data.engine_name} runs ${new Intl.ListFormat('en-GB').format(data.version_languages)} alongside SQL`
+          ? `${data.engine_name} runs ${new Intl.ListFormat('en-GB').format(data.version_languages)} alongside ${data.languages[data.engine_language_code]}`
           : `${data.example.name} runs ${data.example.language_name} alongside SQL`
         }: <a href="/${Buffer.from(data.example.code,'hex').toString('base64url')}">see an example</a>. ${
           data.version_languages ? 'request another language' : `request a language for ${data.engine_name}`
@@ -180,7 +180,7 @@ export const handler = async event => {
     <div>
       <a href="/">db<>fiddle</a>
       <select id="engine">${data.engines.reduce((p,e) => /*html*/`${p}
-        <option value="${e.engine_code}" ${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
+        <option value="${e.engine_code}" data-native="${e.engine_language_code}"${e.engine_code===data.engine_code?' selected':''}>${e.engine_name}</option>`, '')}
       <select>${data.engines.reduce((p,e) => /*html*/`${p}
       <select class="version${e.engine_code!==data.engine_code?' hidden':''}" data-engine="${e.engine_code}">${e.versions.reduce((p,v) => /*html*/`${p}
         <option value="${v.version_code}" data-languages="${v.languages.join(',')}"${v.version_assists_split?' data-assists-split':''}${v.version_code===e.engine_version_code?' selected':''}${v.version_is_active?'':' disabled'}>${v.version_name}</option>`, '')}
@@ -203,7 +203,7 @@ export const handler = async event => {
     <header>
       <div>By using db<>fiddle, you agree to license everything you submit by <a href="https://creativecommons.org/publicdomain/zero/1.0/legalcode">Creative Commons CC0</a>.</div>${banner}
     </header>
-    <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i,data?.fiddle_lang?.[i] ?? '')}`, '')}
+    <div>${data.fiddle_input.reduce((p,c,i) => /*html*/`${p}${batch(c,data?.fiddle_output?.[i],i,data.fiddle_lang[i])}`, '')}
     </div>${data.adverts.length?/*html*/`
     <footer>${data.adverts.reduce((p,c) => /*html*/`${p}
       <a href="${c.url}"${c.words ? ' class="words"' : ''}>${c.image ? /*html*/`<img src="/static/${c.image}" alt="${c.alt}">` : ''}${c.words ? /*html*/`<div>${c.words}</div>` : ''}<div>${c.tagline}</div></a>`,'')}

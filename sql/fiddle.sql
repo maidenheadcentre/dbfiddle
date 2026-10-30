@@ -19,6 +19,7 @@ create function get(bytea) returns jsonb as $$
     select z
     from( select engine_code
                , engine_name
+               , engine_language_code
                , version_code
                , version_name
                , sample_name
@@ -30,7 +31,7 @@ create function get(bytea) returns jsonb as $$
                   from speaks s natural join language
                   where s.engine_code = f.engine_code and
                         s.version_code = f.version_code and
-                        s.language_code <> 'sql') version_languages
+                        s.language_code <> e.engine_language_code) version_languages
                , (select json_object_agg(language_code, language_name) from language) languages
                , ( select json_build_object('code', dv.version_code, 'name', dv.version_name)
                    from version dv natural join allowed a
@@ -41,16 +42,17 @@ create function get(bytea) returns jsonb as $$
                , ( select json_build_object('code', encode(fiddle_code,'hex'), 'name', case when engine_code = f.engine_code then engine_name || ' ' || version_name else engine_name end, 'language_name', language_name)
                    from example natural join engine natural join version natural join language
                    where v.version_code = e.engine_default_version_code and
-                         b.fiddle_lang is null and
+                         b.fiddle_lang <@ array[e.engine_language_code] and
                          ((engine_code,version_code) = (f.engine_code,f.version_code) or
                           not exists (select from speaks s
                                       where s.engine_code = f.engine_code and
                                             s.version_code = f.version_code and
-                                            s.language_code <> 'sql'))
+                                            s.language_code <> e.engine_language_code))
                    order by random() limit 1 ) example
                , (select json_agg(z order by engine_name)
                   from (select engine_code
                              , engine_name
+                             , engine_language_code
                              , case when e.engine_code = f.engine_code then f.version_code else engine_default_version_code end engine_version_code
                              , (select json_agg(z order by split_part(version_ordinal,'.',1)::int, nullif(split_part(version_ordinal,'.',2),'')::int, version_name desc)
                                 from (select version_code
@@ -84,13 +86,8 @@ create function get(bytea) returns jsonb as $$
                         where r.engine_code is null or r.engine_code=e.engine_code) z) adverts
            from fiddle f natural join engine e natural join version v
                 cross join lateral
-                  -- '' is the wire spelling of "the engine's own SQL"; the runners
-                  -- do not accept 'sql' as a language, so it must not reach a client
                   (select coalesce(array_agg(batch_input order by batch_ordinal),'{}') fiddle_input
-                        , case when count(*) filter (where language_code <> 'sql') > 0
-                               then array_agg(case when language_code = 'sql' then ''
-                                                   else language_code end
-                                              order by batch_ordinal) end fiddle_lang
+                        , coalesce(array_agg(language_code order by batch_ordinal),'{}') fiddle_lang
                         , case when count(*) = 0 then '{}'::text[]
                                when count(batch_output) > 0
                                then array_agg(batch_output order by batch_ordinal) end fiddle_output

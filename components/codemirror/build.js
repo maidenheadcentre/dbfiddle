@@ -19,6 +19,7 @@ const languageExtension = (engine,lang,native) => [
   : (lang === 'c') ? cpp()
   : (lang === 'php') ? php({ baseLanguage: null })
   : (lang === 'bash') ? StreamLanguage.define(shell)
+  : (lang === 'valkey-cli' || lang === 'redis-cli') ? []
   : sql({ dialect: (engine === 'postgres') ? PostgreSQL
                  : (engine === 'mysql') ? MySQL
                  : (engine === 'mariadb') ? MariaSQL

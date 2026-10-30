@@ -26,7 +26,7 @@ begin
       select fiddle_code from i into actual;
       --
       insert into batch(engine_code,version_code,sample_name,fiddle_code,language_code,batch_ordinal,batch_input,batch_output)
-      select engine, version, sample, code, coalesce(nullif(lang[i],''),'sql'), i, input[i], output[i] #>> '{}'
+      select engine, version, sample, code, coalesce(nullif(lang[i],''),(select engine_language_code from engine e where e.engine_code = engine)), i, input[i], output[i] #>> '{}'
       from generate_subscripts(input,1) i;
       --
       return actual;

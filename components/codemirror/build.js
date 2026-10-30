@@ -8,6 +8,7 @@ import { lintKeymap } from '@codemirror/lint'
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
+import { php } from '@codemirror/lang-php';
 import { shell } from '@codemirror/legacy-modes/mode/shell';
 import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } from '@codemirror/lang-sql';
 
@@ -16,6 +17,7 @@ const languageExtension = (engine,lang) => [
   : (lang === 'mongosh') ? javascript()
   : (lang === 'python') ? python()
   : (lang === 'c') ? cpp()
+  : (lang === 'php') ? php({ baseLanguage: null })
   : (lang === 'bash') ? StreamLanguage.define(shell)
   : sql({ dialect: (engine === 'postgres') ? PostgreSQL
                  : (engine === 'mysql') ? MySQL

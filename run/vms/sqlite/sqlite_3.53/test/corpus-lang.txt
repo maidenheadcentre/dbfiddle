@@ -1,5 +1,5 @@
 # nothing volatile: no random, time, os.environ, pid or sqlite version
-# the traceback case stays a single-batch line: its script path /tmp/batch<N>.py names the batch
+# a traceback or a php error names its script, /tmp/batch<N>.py or .php, so those cases stay single-batch lines
 
 # --- the language runs at all ---
 [["print(6*7)","python"]]
@@ -45,9 +45,57 @@
 [["import sys\nsys.exit(3)","python"]]
 [["1/0","python"]]
 
+# --- php: a batch is a PHP file, run as written ---
+[["<?php echo 6*7;","php"]]
+[["echo 6*7;","php"]]
+[["text before <?php echo 6*7; ?> text after","php"]]
+["select 1 as plain",["<?php echo 2;","php"],"select 3 as plain_again"]
+
+# --- php shares /data/fiddle.db, through PDO or SQLite3 ---
+["create table t as select 42 x",["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\necho $c->query('select x from t')->fetchColumn();","php"]]
+["create table t(x); insert into t values (1),(2),(3)",["<?php\n$c = new SQLite3('/data/fiddle.db');\nvar_dump($c->querySingle('select sum(x) s, count(*) n from t', true));","php"]]
+[["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\nvar_dump($c->query(\"select 1.5, 2, x'4142', 'café', null\")->fetch(PDO::FETCH_NUM));","php"]]
+
+# --- php writes: PDO and SQLite3 both autocommit, so a write is kept unless a transaction is left open ---
+["create table t (x int)",["<?php\n(new PDO('sqlite:/data/fiddle.db'))->exec('insert into t values (7)');","php"],"select * from t"]
+["create table t (x int)",["<?php\n(new SQLite3('/data/fiddle.db'))->exec('insert into t values (8)');","php"],"select * from t"]
+["create table t (x int)",["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\n$c->beginTransaction();\n$c->exec('insert into t values (9)');","php"],"select count(*) n from t"]
+["create table t (x int)",["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\n$c->beginTransaction();\n$c->exec('insert into t values (10)');\n$c->commit();","php"],"select * from t"]
+
+# --- php is on the SQL batches' sqlite: the same dialect (no double-quoted strings) and the same extras ---
+["select \"abc\"",["<?php\ntry {\n  (new PDO('sqlite:/data/fiddle.db'))->query('select \"abc\"');\n} catch (PDOException $e) {\n  echo $e->getMessage();\n}","php"]]
+[["<?php\nvar_dump((new PDO('sqlite:/data/fiddle.db'))->query('select pow(2,10), json_array(1,2)')->fetch(PDO::FETCH_NUM));","php"]]
+
+# --- an engine error: PDO throws, SQLite3 warns and returns false ---
+[["<?php\ntry {\n  (new PDO('sqlite:/data/fiddle.db'))->query('select nosuch');\n} catch (PDOException $e) {\n  echo $e->getMessage();\n}","php"]]
+[["<?php\nvar_dump((new SQLite3('/data/fiddle.db'))->query('select nosuch'));","php"]]
+
+# --- a connection is a connection: a SQL batch's temp table and open transaction are the runner's, not php's ---
+["create temp table tt as select 1 x",["<?php\ntry {\n  (new PDO('sqlite:/data/fiddle.db'))->query('select * from tt');\n} catch (PDOException $e) {\n  echo $e->getMessage();\n}","php"],"select * from tt"]
+["create table t(x); begin; insert into t values (1)",["<?php\necho (new PDO('sqlite:/data/fiddle.db'))->query('select count(*) from t')->fetchColumn();","php"],"commit; select count(*) n from t"]
+
+# --- php and python in one fiddle share the database too ---
+["create table t (x int)",["<?php\n(new PDO('sqlite:/data/fiddle.db'))->exec('insert into t values (1)');","php"],["import sqlite3\nprint(sqlite3.connect('/data/fiddle.db').execute('select * from t').fetchall())","python"]]
+
+# --- one process per batch: nothing carries over ---
+[["<?php\n$x = 1;","php"],["<?php\nvar_dump(isset($x));","php"]]
+
+# --- stdout is a plain fence; stderr and a non-zero exit are error fences ---
+[["<?php echo '```';","php"]]
+[["<?php echo 'café 日本語 🐦';","php"]]
+[["<?php echo \"a\\nb\\nc\\n\";","php"]]
+[["<?php fwrite(STDERR, \"to stderr\\n\");","php"]]
+[["<?php echo \"out\\n\";\nfwrite(STDERR, \"err\\n\");","php"]]
+[["<?php","php"]]
+[["<?php exit(3);","php"]]
+[["<?php echo $undefined;\necho 'after';","php"]]
+[["<?php intdiv(1, 0);","php"]]
+[["<?php echo 1","php"]]
+
 # --- a language nothing speaks is fenced, and only its own batch ---
 [["select 1 as before",""],["print(1)","node"],["select 2 as after",""]]
 [["print(1)","PYTHON"]]
+[["<?php echo 1;","PHP"]]
 
 # --- malformed elements fail the payload, as a malformed array always has ---
 [["one","two","three"]]

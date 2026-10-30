@@ -139,7 +139,7 @@ mkdir /mnt/fire/sqlite_3.53/mnt
 
 <<'EODOCKER' cat > /mnt/fire/sqlite_3.53/DOCKERFILE
 FROM debian:trixie-slim
-RUN apt-get update && apt-get install --no-install-recommends -y systemd-sysv udev haveged python3
+RUN apt-get update && apt-get install --no-install-recommends -y systemd-sysv udev haveged python3 php-cli php-sqlite3
 RUN echo '[Service]' > /etc/systemd/system/fiddle.service \
   && echo 'ExecStart=/fiddle.sh' >> /etc/systemd/system/fiddle.service \
   && echo '[Install]' >> /etc/systemd/system/fiddle.service \
@@ -432,10 +432,15 @@ static long now_ms(void){
 #define CAP (4L << 20)
 
 #define PYTHON "/usr/bin/python3"
+#define PHP "/usr/bin/php"
 
 static const char *lang_interp(const char *lang){
   if(!strcmp(lang, "python")) return PYTHON;
+  if(!strcmp(lang, "php")) return PHP;
   return NULL;
+}
+static const char *lang_suffix(const char *lang){
+  return !strcmp(lang, "python") ? "py" : "php";
 }
 
 static int run_lang_batch(const batch *b, size_t idx, const char *interp,
@@ -445,7 +450,7 @@ static int run_lang_batch(const batch *b, size_t idx, const char *interp,
   if(pipe(ep) < 0){ close(op[0]); close(op[1]); return 0; }
 
   char path[64];
-  snprintf(path, sizeof path, "/tmp/batch%zu.py", idx + 1);
+  snprintf(path, sizeof path, "/tmp/batch%zu.%s", idx + 1, lang_suffix(b->lang));
   FILE *f = fopen(path, "wb");
   if(!f){ close(op[0]); close(op[1]); close(ep[0]); close(ep[1]); return 0; }
   fwrite(b->s, 1, b->len, f);
@@ -713,8 +718,8 @@ grep -m1 'define SQLITE_VERSION ' /mnt/fire/sqlite_3.53/src/sqlite3.h
 
 # per-engine tag: concurrent builds on cumbria2 must never share one
 DOCKER_BUILDKIT=1 docker build --no-cache -t dummy_sqlite_3.53 - < /mnt/fire/sqlite_3.53/DOCKERFILE
-# 300 landed 103M free after the ceremony, and the gate moves 1:1 with this count
-dd if=/dev/zero bs=1M count=270 > /mnt/fire/sqlite_3.53/rootfs.ext4
+# 290 landed 72M free after the ceremony, and the gate moves 1:1 with this count
+dd if=/dev/zero bs=1M count=290 > /mnt/fire/sqlite_3.53/rootfs.ext4
 mkfs.ext4 -m 0 /mnt/fire/sqlite_3.53/rootfs.ext4
 mount -o loop /mnt/fire/sqlite_3.53/rootfs.ext4 /mnt/fire/sqlite_3.53/mnt
 docker run --rm -ti -v /mnt/fire/sqlite_3.53/mnt:/my-rootfs dummy_sqlite_3.53
@@ -726,8 +731,9 @@ exit
 # SQLITE_DQS=0: `select "abc"` must be an error, not the string 'abc'
 # never add SQLITE_DEFAULT_MEMSTATUS=0: the heap limit in fiddle.c rides on the
 # allocation accounting it turns off, and would silently do nothing
-# the same amalgamation again as python's libsqlite3.so.0, behaviour flags verbatim but
-# never THREADSAFE=0: python releases the GIL around sqlite calls
+# the same amalgamation again as python's and php's libsqlite3.so.0, behaviour flags verbatim
+# but never THREADSAFE=0: python releases the GIL around sqlite calls. COLUMN_METADATA adds
+# API only, and without its sqlite3_column_table_name pdo_sqlite will not load
 cp /mnt/fire/sqlite_3.53/fiddle.c /mnt/fire/sqlite_3.53/mnt/fiddle.c
 cp /mnt/fire/sqlite_3.53/src/sqlite3.c /mnt/fire/sqlite_3.53/src/sqlite3.h /mnt/fire/sqlite_3.53/mnt/
 docker run --rm -v /mnt/fire/sqlite_3.53/mnt:/my-rootfs debian:trixie-slim bash -c '
@@ -761,6 +767,7 @@ docker run --rm -v /mnt/fire/sqlite_3.53/mnt:/my-rootfs debian:trixie-slim bash 
       -DSQLITE_ENABLE_BYTECODE_VTAB \
       -DSQLITE_ENABLE_OFFSET_SQL_FUNC \
       -DSQLITE_ENABLE_EXPLAIN_COMMENTS \
+      -DSQLITE_ENABLE_COLUMN_METADATA \
       -lm -ldl -lpthread
   rm /my-rootfs/fiddle.c /my-rootfs/sqlite3.c /my-rootfs/sqlite3.h'
 chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/ldd /fiddle
@@ -774,6 +781,14 @@ pyver=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/python3 -c 'import sqlite3; pr
 dqs=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/python3 -c 'import sqlite3; sqlite3.connect(":memory:").execute("select \"abc\"")' 2>&1 || true)
 case $dqs in *'no such column'*) ;;
   *) echo "ABORT: python's sqlite accepts double-quoted strings: $dqs"; exit 1 ;;
+esac
+[ -x /mnt/fire/sqlite_3.53/mnt/usr/bin/php ] || { echo "ABORT: /usr/bin/php is missing from the rootfs"; exit 1; }
+# 2>&1: a startup warning, such as an extension that failed to load, must fail the comparison
+phpver=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/php -r 'echo SQLite3::version()["versionString"], " ", (new PDO("sqlite::memory:"))->query("select sqlite_version()")->fetchColumn();' 2>&1 || true)
+[ "$phpver" = "$SQLITE_VER $SQLITE_VER" ] || { echo "ABORT: php's sqlite is $phpver, the amalgamation is $SQLITE_VER"; exit 1; }
+dqs=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/php -r '(new PDO("sqlite::memory:"))->query("select \"abc\"");' 2>&1 || true)
+case $dqs in *'no such column'*) ;;
+  *) echo "ABORT: php's sqlite accepts double-quoted strings: $dqs"; exit 1 ;;
 esac
 
 docker rmi dummy_sqlite_3.53
@@ -790,7 +805,9 @@ echo "warm-up: $(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /
 # printf, not echo: this is dash, and its echo would turn the \n into a newline
 printf '%s\n' '[["import sqlite3\nprint(1)","python"]]' > /tmp/warm.json
 printf 'warm-up python: %s\n' "$(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /tmp/warmout.json)" > /dev/console 2>&1
-# the python warm-up created the database file: left behind, every fiddle inherits it
+printf '%s\n' '[["<?php new PDO(\"sqlite::memory:\"); echo 1;","php"]]' > /tmp/warm.json
+printf 'warm-up php: %s\n' "$(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /tmp/warmout.json)" > /dev/console 2>&1
+# the language warm-ups created the database file: left behind, every fiddle inherits it
 rm -f /tmp/warm.json /tmp/warmout.json /tmp/batch* /data/fiddle.db
 sync
 /vsock serve > /tmp/batches.json
@@ -812,6 +829,7 @@ until grep -q FIDDLE-READY /tmp/fc-snap-sqlite_3.53.log ; do sleep 0.1 ; done
 # proves the warm-up ran: a runner that failed to compile shows up nowhere else
 grep -a 'warm-up:' /tmp/fc-snap-sqlite_3.53.log
 grep -a 'warm-up python:' /tmp/fc-snap-sqlite_3.53.log
+grep -a 'warm-up php:' /tmp/fc-snap-sqlite_3.53.log
 sleep 0.3
 curl -sf --unix-socket /tmp/fc-snap-sqlite_3.53.sock -X PATCH http://localhost/vm -H 'Content-Type: application/json' -d '{"state":"Paused"}'
 curl -sf --unix-socket /tmp/fc-snap-sqlite_3.53.sock -X PUT http://localhost/snapshot/create -H 'Content-Type: application/json' -d '{"snapshot_type":"Full","snapshot_path":"vmstate","mem_file_path":"mem"}'
@@ -840,10 +858,14 @@ cat > /tmp/sqlite_3.53-langcheck.json <<'JSON'
  ["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nprint('py-sees:' + str(c.execute('select x from t').fetchone()[0]))","python"],
  ["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nc.execute('insert into t values (7)')\nc.commit()","python"],
  ["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nc.execute('insert into t values (8)')","python"],
+ ["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\necho 'php-sees:', $c->query('select max(x) from t')->fetchColumn();","php"],
+ ["<?php\n(new PDO('sqlite:/data/fiddle.db'))->exec('insert into t values (5)');","php"],
  "select x from t order by x",
  ["import sqlite3\nprint('py-lib:' + sqlite3.sqlite_version)","python"],
+ ["<?php\necho 'php-lib:', SQLite3::version()['versionString'];","php"],
  ["console.log(1)","node"],
- ["import sys\nsys.exit(3)","python"]]
+ ["import sys\nsys.exit(3)","python"],
+ ["<?php\nexit(4);","php"]]
 JSON
 lang=$(/mnt/fire/sqlite_3.53/run.sh < /tmp/sqlite_3.53-langcheck.json) || true
 printf '%s\n' "$lang"
@@ -863,4 +885,17 @@ case $lang in *'unknown language: node'*) ;;
 esac
 case $lang in *'exited with status 3'*) ;;
   *) echo "ABORT: a non-zero exit was not reported"; exit 1 ;;
+esac
+case $lang in *php-sees:42*) ;;
+  *) echo "ABORT: the php batch did not read the shared database"; exit 1 ;;
+esac
+# pdo_sqlite autocommits, unlike python's module: the insert is kept with no commit
+case $lang in *'| 5 |\n| 7 |\n| 42 |'*) ;;
+  *) echo "ABORT: the php insert is not visible to the next SQL batch"; exit 1 ;;
+esac
+case $lang in *"php-lib:$SQLITE_VER"*) ;;
+  *) echo "ABORT: a php batch is not on sqlite $SQLITE_VER"; exit 1 ;;
+esac
+case $lang in *'exited with status 4'*) ;;
+  *) echo "ABORT: a non-zero php exit was not reported"; exit 1 ;;
 esac

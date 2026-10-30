@@ -1,0 +1,81 @@
+# nothing volatile: no INFO, HELLO, TIME, LASTSAVE, CLIENT, MEMORY, OBJECT IDLETIME or FREQ,
+# SCAN, KEYS matching more than one key, SPOP or a RAND* command, XADD *, a TTL that counts
+# down, or anything that prints a version; and no set or hash big enough for a hashtable,
+# whose order comes from a hash seed that changes per fiddle
+# cli only: pair-form lines go in corpus-lang.txt
+
+# --- strings, counters and the markers --no-raw keeps ---
+["SET greeting hello\nGET greeting\nGET missing"]
+["SET n 10\nINCR n\nINCRBY n 5\nDECR n\nINCRBYFLOAT n 0.5\nGET n"]
+["SET s abc\nINCR s"]
+["APPEND s abc\nAPPEND s def\nSTRLEN s\nGETRANGE s 1 3\nSETRANGE s 0 X\nGET s"]
+["MSET a 1 b 2 c 3\nMGET a b c missing"]
+["SET k v NX\nSET k w NX\nSET k w XX GET\nGET k"]
+["EXISTS a\nSET a 1\nEXISTS a\nDEL a\nEXISTS a\nDEL a"]
+["SET k v EX 1000\nPERSIST k\nTTL k\nTTL missing"]
+
+# --- quoting, escapes and non-ascii as the cli prints them ---
+["SET q \"hello world\"\nGET q"]
+["SET q 'single quoted'\nGET q"]
+["SET q \"tab\\there\"\nGET q\nSTRLEN q"]
+["SET q \"caf\\xc3\\xa9\"\nGET q"]
+["SET q café\nGET q\nSTRLEN q"]
+["SET q \"\"\nGET q\nSTRLEN q"]
+["SET q \"unterminated"]
+["SET bt \"```\"\nGET bt"]
+
+# --- lists, hashes, sets and sorted sets small enough to keep their order ---
+["RPUSH l a b c\nLPUSH l z\nLRANGE l 0 -1\nLLEN l\nLPOP l\nRPOP l 2\nLINDEX l 0"]
+["RPUSH l 1 2 3 4 5\nLTRIM l 1 3\nLRANGE l 0 -1\nLINSERT l BEFORE 3 x\nLRANGE l 0 -1"]
+["LPOP nolist\nLRANGE nolist 0 -1"]
+["SET notalist x\nLPUSH notalist y"]
+["HSET h name ann age 30\nHGET h name\nHGETALL h\nHINCRBY h age 1\nHKEYS h\nHVALS h\nHLEN h\nHDEL h name\nHGETALL h"]
+["HGETALL nohash\nHGET nohash f"]
+["SADD s 3 1 2\nSMEMBERS s\nSISMEMBER s 2\nSCARD s"]
+["SADD a x y z\nSADD b y z w\nSUNIONSTORE u a b\nSORT u ALPHA\nSINTERSTORE i a b\nSORT i ALPHA\nSDIFFSTORE d a b\nSORT d ALPHA"]
+["ZADD z 1 one 2 two 3 three\nZRANGE z 0 -1 WITHSCORES\nZSCORE z two\nZRANK z three\nZINCRBY z 5 one\nZREVRANGE z 0 0\nZRANGEBYSCORE z (1 +inf"]
+["RPUSH n 3 1 2\nSORT n\nSORT n DESC LIMIT 0 2"]
+
+# --- streams with explicit ids, bitmaps, hyperloglog, geo ---
+["XADD st 1-1 name ann\nXADD st 2-1 name bob\nXLEN st\nXRANGE st - +\nXADD st 1-0 name early"]
+["SETBIT b 7 1\nGETBIT b 7\nBITCOUNT b\nGET b"]
+["PFADD h a b c a\nPFCOUNT h"]
+["GEOADD g 13.361389 38.115556 Palermo 15.087269 37.502669 Catania\nGEODIST g Palermo Catania km\nGEOPOS g Palermo"]
+
+# --- transactions ---
+["MULTI\nSET a 1\nINCR a\nEXEC"]
+["MULTI\nSET a 1\nINCR\nEXEC"]
+["MULTI\nSET a x\nINCR a\nEXEC"]
+["DISCARD"]
+
+# --- scripts and functions ---
+["EVAL \"return {1, 2, 'three', redis.call('PING')}\" 0"]
+["EVAL \"return redis.call('INCRBY', KEYS[1], ARGV[1])\" 1 counter 5\nGET counter"]
+["EVAL \"return nosuchglobal\" 0"]
+["FUNCTION LOAD \"#!lua name=lib\\nredis.register_function('double', function(keys, args) return args[1] * 2 end)\"\nFCALL double 0 21\nFUNCTION LIST LIBRARYNAME lib"]
+
+# --- the keyspace ---
+["SET s x\nRPUSH l x\nTYPE s\nTYPE l\nTYPE missing\nRENAME s s2\nEXISTS s s2\nDBSIZE"]
+["SET a 1\nKEYS a*\nKEYS nomatch*"]
+["SET a 1\nSELECT 1\nGET a\nSELECT 0\nGET a"]
+["SET a 1\nFLUSHALL\nDBSIZE"]
+["SET n 123\nOBJECT ENCODING n\nSET s abc\nOBJECT ENCODING s\nRPUSH l a\nOBJECT ENCODING l\nSADD st 1\nOBJECT ENCODING st\nSADD st2 x\nOBJECT ENCODING st2"]
+
+# --- the server's defaults ---
+["CONFIG GET maxmemory\nCONFIG GET maxmemory-policy\nCONFIG GET appendonly\nCONFIG GET databases"]
+["ACL WHOAMI\nACL LIST"]
+["DEBUG SLEEP 0"]
+
+# --- the cli's own handling ---
+["NOSUCHCOMMAND a b"]
+["GET"]
+["# a comment is a command to the cli"]
+["SET a 1\n\n\nGET a"]
+[""]
+["   "]
+["3 INCR r\nGET r"]
+["SET a 1\nQUIT\nGET a"]
+
+# --- batches share the server ---
+["SET carried 1","GET carried","INCR carried"]
+["SET a 1","FLUSHALL","GET a"]

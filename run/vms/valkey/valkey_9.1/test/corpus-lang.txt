@@ -1,0 +1,70 @@
+# nothing volatile: no random, time, os.environ, process.env or pid; no uncaught error, whose
+# report carries a path or a stack; and no client or interpreter version
+
+# --- each language runs at all ---
+[["print(6*7)","python"]]
+[["console.log(6*7)","node"]]
+[["<?php echo 6*7, \"\\n\";","php"]]
+[["six times seven: <?= 6*7 ?>","php"]]
+
+# --- a string element is still the cli, and elements may be mixed ---
+[["PING",""]]
+[["SET a 1",""],"GET a",["print(3)","python"]]
+["SET plain 1",["print(2)","python"],"GET plain"]
+
+# --- the server is shared: the cli writes, each client reads ---
+[["SET k from-cli",""],["import valkey\nprint(valkey.Valkey().get('k'))","python"]]
+[["SET k from-cli",""],["import valkey\nprint(valkey.Valkey(decode_responses=True).get('k'))","python"]]
+[["SET k from-cli",""],["const Valkey = require('iovalkey');\nconst v = new Valkey();\nv.get('k').then(r => { console.log(r); v.quit(); });","node"]]
+[["SET k from-cli",""],["<?php\n$r = new Redis();\n$r->connect('127.0.0.1');\nvar_dump($r->get('k'));","php"]]
+
+# --- each client writes, the cli reads ---
+[["import valkey\nvalkey.Valkey().rpush('l', 'py', 3)","python"],"LRANGE l 0 -1"]
+[["const Valkey = require('iovalkey');\nconst v = new Valkey();\nv.hset('h', 'lang', 'node').then(() => v.quit());","node"],"HGETALL h"]
+[["<?php\n$r = new Redis();\n$r->connect('127.0.0.1');\n$r->zAdd('z', 1.5, 'php');","php"],"ZRANGE z 0 -1 WITHSCORES"]
+
+# --- replies as each client types them ---
+[["import valkey\nr = valkey.Valkey()\nr.set('n', 5)\nprint(r.incr('n'), r.get('missing'), r.exists('n'), r.hgetall('nohash'))","python"]]
+[["const Valkey = require('iovalkey');\nconst v = new Valkey();\n(async () => {\n  await v.set('n', 5);\n  console.log(await v.incr('n'), await v.get('missing'), await v.hgetall('nohash'));\n  v.quit();\n})();","node"]]
+[["<?php\n$r = new Redis();\n$r->connect('127.0.0.1');\n$r->set('n', 5);\nvar_dump($r->incr('n'), $r->get('missing'), $r->hGetAll('nohash'));","php"]]
+
+# --- a server error, caught ---
+[["import valkey\nr = valkey.Valkey()\nr.set('s', 'x')\ntry:\n    r.incr('s')\nexcept valkey.ResponseError as e:\n    print('error:', e)","python"]]
+[["const Valkey = require('iovalkey');\nconst v = new Valkey();\nv.set('s', 'x').then(() => v.incr('s')).catch(e => console.log('error:', e.message)).finally(() => v.quit());","node"]]
+[["<?php\n$r = new Redis();\n$r->connect('127.0.0.1');\n$r->set('s', 'x');\nvar_dump($r->incr('s'));\necho $r->getLastError(), \"\\n\";","php"]]
+
+# --- pipelines and transactions ---
+[["import valkey\np = valkey.Valkey().pipeline()\np.set('a', 1).incr('a').get('a')\nprint(p.execute())","python"]]
+[["const Valkey = require('iovalkey');\nconst v = new Valkey();\nv.multi().set('a', 1).incr('a').exec().then(r => { console.log(JSON.stringify(r)); v.quit(); });","node"]]
+[["<?php\n$r = new Redis();\n$r->connect('127.0.0.1');\nvar_dump($r->multi()->set('a', 1)->incr('a')->exec());","php"]]
+
+# --- one process per batch: only the server's state carries over ---
+[["x = 1","python"],["print('x' in dir())","python"]]
+[["globalThis.y = 1","node"],["console.log(typeof globalThis.y)","node"]]
+[["<?php $x = 1;","php"],["<?php var_dump(isset($x));","php"]]
+
+# --- stdout and stderr render differently; a silent batch renders nothing ---
+[["import sys\nsys.stderr.write('to stderr\\n')","python"]]
+[["console.error('to stderr')","node"]]
+[["<?php fwrite(STDERR, \"to stderr\\n\");","php"]]
+[["pass","python"]]
+
+# --- a non-zero exit with no stderr gets "exited with status N" ---
+[["import sys\nsys.exit(3)","python"]]
+[["process.exit(4)","node"]]
+[["<?php exit(5);","php"]]
+
+# --- an unknown language is fenced, and only its own batch ---
+[["PING",""],["print(1)","perl"],["PING",""]]
+[["PING","valkey-cli"]]
+[["print(1)","PYTHON"]]
+
+# --- malformed elements fail the payload ---
+[["one","two","three"]]
+[["text",1]]
+[[]]
+
+# --- output shapes through fence_plain ---
+[["print('```')","python"]]
+[["print('café 日本語 🐦')","python"]]
+[["import sys\nsys.stdout.write('no trailing newline')","python"]]

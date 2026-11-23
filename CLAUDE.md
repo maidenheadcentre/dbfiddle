@@ -293,6 +293,10 @@ cap.
 - **A new version under an engine that carries a sample carries the sample too.** Build
   `<engine>_<sample>` from that version's own recipe, languages included, and give it its own
   `allowed` row and default fiddle.
+- **Fiddle DB admin is plain SQL** through `scripts/db.sh`. The transactional-API contract
+  binds the application, not admin work done from here. The `admin.sql` functions are helpers
+  for registrations that are more than one insert — never add new ones. A language is a
+  `language` row plus a `speaks` row per version, inserted once that version's engine runs it.
 
 Adding a version under an existing engine code is much cheaper than a new engine code:
 `engine_default` is a column on `engine`, not `version`, so a new version shares the existing

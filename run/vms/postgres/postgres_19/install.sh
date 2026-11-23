@@ -142,7 +142,7 @@ mkdir /mnt/fire/postgres_19/mnt
 FROM debian:trixie-slim
 RUN apt-get update && apt-get install --no-install-recommends -y tmux wget ca-certificates systemd-sysv udev haveged
 RUN <<'EORUN'
-echo "deb https://apt.postgresql.org/pub/repos/apt trixie-pgdg main 19" > /etc/apt/sources.list.d/pgdg.list
+echo "deb https://apt.postgresql.org/pub/repos/apt trixie-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 wget --quiet -O /etc/apt/trusted.gpg.d/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
 apt-get update
 apt-get -y install postgresql-19 postgresql-19-postgis-3 postgresql-19-pgrouting postgresql-plpython3-19

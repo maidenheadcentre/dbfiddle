@@ -10,6 +10,7 @@ import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
 import { php } from '@codemirror/lang-php';
 import { shell } from '@codemirror/legacy-modes/mode/shell';
+import { perl } from '@codemirror/legacy-modes/mode/perl';
 import { sql, StandardSQL, PostgreSQL, MySQL, MariaSQL, MSSQL, SQLite, PLSQL } from '@codemirror/lang-sql';
 
 const languageExtension = (engine,lang,native) => [
@@ -19,6 +20,7 @@ const languageExtension = (engine,lang,native) => [
   : (lang === 'c') ? cpp()
   : (lang === 'php') ? php({ baseLanguage: null })
   : (lang === 'bash') ? StreamLanguage.define(shell)
+  : (lang === 'perl') ? StreamLanguage.define(perl)
   : (lang === 'valkey-cli' || lang === 'redis-cli') ? []
   : sql({ dialect: (engine === 'postgres') ? PostgreSQL
                  : (engine === 'mysql') ? MySQL

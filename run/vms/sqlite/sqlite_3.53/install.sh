@@ -139,7 +139,7 @@ mkdir /mnt/fire/sqlite_3.53/mnt
 
 <<'EODOCKER' cat > /mnt/fire/sqlite_3.53/DOCKERFILE
 FROM debian:trixie-slim
-RUN apt-get update && apt-get install --no-install-recommends -y systemd-sysv udev haveged python3 php-cli php-sqlite3
+RUN apt-get update && apt-get install --no-install-recommends -y systemd-sysv udev haveged python3 php-cli php-sqlite3 perl libdbd-sqlite3-perl
 RUN echo '[Service]' > /etc/systemd/system/fiddle.service \
   && echo 'ExecStart=/fiddle.sh' >> /etc/systemd/system/fiddle.service \
   && echo '[Install]' >> /etc/systemd/system/fiddle.service \
@@ -433,14 +433,16 @@ static long now_ms(void){
 
 #define PYTHON "/usr/bin/python3"
 #define PHP "/usr/bin/php"
+#define PERL "/usr/bin/perl"
 
 static const char *lang_interp(const char *lang){
   if(!strcmp(lang, "python")) return PYTHON;
   if(!strcmp(lang, "php")) return PHP;
+  if(!strcmp(lang, "perl")) return PERL;
   return NULL;
 }
 static const char *lang_suffix(const char *lang){
-  return !strcmp(lang, "python") ? "py" : "php";
+  return !strcmp(lang, "python") ? "py" : !strcmp(lang, "php") ? "php" : "pl";
 }
 
 static int run_lang_batch(const batch *b, size_t idx, const char *interp,
@@ -718,8 +720,8 @@ grep -m1 'define SQLITE_VERSION ' /mnt/fire/sqlite_3.53/src/sqlite3.h
 
 # per-engine tag: concurrent builds on cumbria2 must never share one
 DOCKER_BUILDKIT=1 docker build --no-cache -t dummy_sqlite_3.53 - < /mnt/fire/sqlite_3.53/DOCKERFILE
-# 290 landed 72M free after the ceremony, and the gate moves 1:1 with this count
-dd if=/dev/zero bs=1M count=290 > /mnt/fire/sqlite_3.53/rootfs.ext4
+# 350 landed 78M free after the ceremony, and the gate moves 1:1 with this count
+dd if=/dev/zero bs=1M count=350 > /mnt/fire/sqlite_3.53/rootfs.ext4
 mkfs.ext4 -m 0 /mnt/fire/sqlite_3.53/rootfs.ext4
 mount -o loop /mnt/fire/sqlite_3.53/rootfs.ext4 /mnt/fire/sqlite_3.53/mnt
 docker run --rm -ti -v /mnt/fire/sqlite_3.53/mnt:/my-rootfs dummy_sqlite_3.53
@@ -731,9 +733,9 @@ exit
 # SQLITE_DQS=0: `select "abc"` must be an error, not the string 'abc'
 # never add SQLITE_DEFAULT_MEMSTATUS=0: the heap limit in fiddle.c rides on the
 # allocation accounting it turns off, and would silently do nothing
-# the same amalgamation again as python's and php's libsqlite3.so.0, behaviour flags verbatim
-# but never THREADSAFE=0: python releases the GIL around sqlite calls. COLUMN_METADATA adds
-# API only, and without its sqlite3_column_table_name pdo_sqlite will not load
+# the same amalgamation again as python's, php's and perl's libsqlite3.so.0, behaviour flags
+# verbatim but never THREADSAFE=0: python releases the GIL around sqlite calls. COLUMN_METADATA
+# adds API only, and without its sqlite3_column_table_name pdo_sqlite and DBD::SQLite will not load
 cp /mnt/fire/sqlite_3.53/fiddle.c /mnt/fire/sqlite_3.53/mnt/fiddle.c
 cp /mnt/fire/sqlite_3.53/src/sqlite3.c /mnt/fire/sqlite_3.53/src/sqlite3.h /mnt/fire/sqlite_3.53/mnt/
 docker run --rm -v /mnt/fire/sqlite_3.53/mnt:/my-rootfs debian:trixie-slim bash -c '
@@ -790,6 +792,14 @@ dqs=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/php -r '(new PDO("sqlite::memory
 case $dqs in *'no such column'*) ;;
   *) echo "ABORT: php's sqlite accepts double-quoted strings: $dqs"; exit 1 ;;
 esac
+[ -x /mnt/fire/sqlite_3.53/mnt/usr/bin/perl ] || { echo "ABORT: /usr/bin/perl is missing from the rootfs"; exit 1; }
+# env -i: the guest has no LANG, and the host's makes perl warn about a missing locale
+plver=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/env -i /usr/bin/perl -MDBI -e 'print DBI->connect("dbi:SQLite::memory:", "", "", {RaiseError => 1})->selectrow_array("select sqlite_version()")' 2>&1 || true)
+[ "$plver" = "$SQLITE_VER" ] || { echo "ABORT: perl's sqlite is $plver, the amalgamation is $SQLITE_VER"; exit 1; }
+dqs=$(chroot /mnt/fire/sqlite_3.53/mnt /usr/bin/env -i /usr/bin/perl -MDBI -e 'DBI->connect("dbi:SQLite::memory:", "", "", {RaiseError => 1})->do(q{select "abc"})' 2>&1 || true)
+case $dqs in *'no such column'*) ;;
+  *) echo "ABORT: perl's sqlite accepts double-quoted strings: $dqs"; exit 1 ;;
+esac
 
 docker rmi dummy_sqlite_3.53
 
@@ -807,6 +817,8 @@ printf '%s\n' '[["import sqlite3\nprint(1)","python"]]' > /tmp/warm.json
 printf 'warm-up python: %s\n' "$(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /tmp/warmout.json)" > /dev/console 2>&1
 printf '%s\n' '[["<?php new PDO(\"sqlite::memory:\"); echo 1;","php"]]' > /tmp/warm.json
 printf 'warm-up php: %s\n' "$(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /tmp/warmout.json)" > /dev/console 2>&1
+printf '%s\n' '[["use DBI;\nDBI->connect(\"dbi:SQLite::memory:\");\nprint 1;","perl"]]' > /tmp/warm.json
+printf 'warm-up perl: %s\n' "$(/fiddle /tmp/warm.json /tmp/warmout.json >/dev/null 2>&1; cat /tmp/warmout.json)" > /dev/console 2>&1
 # the language warm-ups created the database file: left behind, every fiddle inherits it
 rm -f /tmp/warm.json /tmp/warmout.json /tmp/batch* /data/fiddle.db
 sync
@@ -830,6 +842,7 @@ until grep -q FIDDLE-READY /tmp/fc-snap-sqlite_3.53.log ; do sleep 0.1 ; done
 grep -a 'warm-up:' /tmp/fc-snap-sqlite_3.53.log
 grep -a 'warm-up python:' /tmp/fc-snap-sqlite_3.53.log
 grep -a 'warm-up php:' /tmp/fc-snap-sqlite_3.53.log
+grep -a 'warm-up perl:' /tmp/fc-snap-sqlite_3.53.log
 sleep 0.3
 curl -sf --unix-socket /tmp/fc-snap-sqlite_3.53.sock -X PATCH http://localhost/vm -H 'Content-Type: application/json' -d '{"state":"Paused"}'
 curl -sf --unix-socket /tmp/fc-snap-sqlite_3.53.sock -X PUT http://localhost/snapshot/create -H 'Content-Type: application/json' -d '{"snapshot_type":"Full","snapshot_path":"vmstate","mem_file_path":"mem"}'
@@ -860,12 +873,16 @@ cat > /tmp/sqlite_3.53-langcheck.json <<'JSON'
  ["import sqlite3\nc = sqlite3.connect('/data/fiddle.db')\nc.execute('insert into t values (8)')","python"],
  ["<?php\n$c = new PDO('sqlite:/data/fiddle.db');\necho 'php-sees:', $c->query('select max(x) from t')->fetchColumn();","php"],
  ["<?php\n(new PDO('sqlite:/data/fiddle.db'))->exec('insert into t values (5)');","php"],
+ ["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db');\nprint 'perl-sees:', $c->selectrow_array('select max(x) from t');","perl"],
+ ["use DBI;\nDBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->do('insert into t values (50)');","perl"],
  "select x from t order by x",
  ["import sqlite3\nprint('py-lib:' + sqlite3.sqlite_version)","python"],
  ["<?php\necho 'php-lib:', SQLite3::version()['versionString'];","php"],
+ ["use DBI;\nprint 'perl-lib:', DBI->connect('dbi:SQLite::memory:')->selectrow_array('select sqlite_version()');","perl"],
  ["console.log(1)","node"],
  ["import sys\nsys.exit(3)","python"],
- ["<?php\nexit(4);","php"]]
+ ["<?php\nexit(4);","php"],
+ ["exit 5;","perl"]]
 JSON
 lang=$(/mnt/fire/sqlite_3.53/run.sh < /tmp/sqlite_3.53-langcheck.json) || true
 printf '%s\n' "$lang"
@@ -898,4 +915,17 @@ case $lang in *"php-lib:$SQLITE_VER"*) ;;
 esac
 case $lang in *'exited with status 4'*) ;;
   *) echo "ABORT: a non-zero php exit was not reported"; exit 1 ;;
+esac
+case $lang in *perl-sees:42*) ;;
+  *) echo "ABORT: the perl batch did not read the shared database"; exit 1 ;;
+esac
+# DBI defaults to AutoCommit, so the insert is kept with no commit
+case $lang in *'| 42 |\n| 50 |'*) ;;
+  *) echo "ABORT: the perl insert is not visible to the next SQL batch"; exit 1 ;;
+esac
+case $lang in *"perl-lib:$SQLITE_VER"*) ;;
+  *) echo "ABORT: a perl batch is not on sqlite $SQLITE_VER"; exit 1 ;;
+esac
+case $lang in *'exited with status 5'*) ;;
+  *) echo "ABORT: a non-zero perl exit was not reported"; exit 1 ;;
 esac

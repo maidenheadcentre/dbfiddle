@@ -1,5 +1,5 @@
 # nothing volatile: no random, time, os.environ, pid or sqlite version
-# a traceback or a php error names its script, /tmp/batch<N>.py or .php, so those cases stay single-batch lines
+# a traceback, a php error or a perl die names its script, /tmp/batch<N>.py, .php or .pl, so those cases stay at a fixed batch position
 
 # --- the language runs at all ---
 [["print(6*7)","python"]]
@@ -92,10 +92,57 @@
 [["<?php intdiv(1, 0);","php"]]
 [["<?php echo 1","php"]]
 
+# --- perl: a batch is a perl script, run as written ---
+[["print 6*7, \"\\n\";","perl"]]
+[["print 6*7","perl"]]
+["select 1 as plain",["print 2;","perl"],"select 3 as plain_again"]
+
+# --- perl shares /data/fiddle.db through DBI and DBD::SQLite ---
+["create table t as select 42 x",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db');\nprint $c->selectrow_array('select x from t');","perl"]]
+["create table t(x); insert into t values (1),(2),(3)",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db');\nprint join(',', $c->selectrow_array('select sum(x), count(*) from t'));","perl"]]
+[["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db');\nprint join('|', map { defined ? $_ : 'undef' } $c->selectrow_array(\"select 1.5, 2, x'4142', 'café', null\"));","perl"]]
+
+# --- perl writes: DBI defaults to AutoCommit, so a write is kept unless a transaction is left open ---
+["create table t (x int)",["use DBI;\nDBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->do('insert into t values (7)');","perl"],"select * from t"]
+["create table t (x int)",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db');\n$c->begin_work;\n$c->do('insert into t values (9)');","perl"],"select count(*) n from t"]
+["create table t (x int)",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db', '', '', {AutoCommit => 0});\n$c->do('insert into t values (10)');\n$c->commit;","perl"],"select * from t"]
+
+# --- perl is on the SQL batches' sqlite: the same dialect (no double-quoted strings) and the same extras ---
+["select \"abc\"",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db', '', '', {RaiseError => 1, PrintError => 0});\neval { $c->do('select \"abc\"') };\nprint $@;","perl"]]
+[["use DBI;\nprint join(',', DBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->selectrow_array('select pow(2,10), json_array(1,2)'));","perl"]]
+
+# --- an engine error: DBI warns and returns undef by default, and dies under RaiseError ---
+[["use DBI;\nmy $r = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->selectrow_array('select nosuch');\nprint defined $r ? 'defined' : 'undef';","perl"]]
+[["use DBI;\nDBI->connect('dbi:SQLite:dbname=/data/fiddle.db', '', '', {RaiseError => 1})->do('select nosuch');\nprint 'after';","perl"]]
+
+# --- a connection is a connection: a SQL batch's temp table and open transaction are the runner's, not perl's ---
+["create temp table tt as select 1 x",["use DBI;\nmy $c = DBI->connect('dbi:SQLite:dbname=/data/fiddle.db', '', '', {RaiseError => 1, PrintError => 0});\neval { $c->selectrow_array('select * from tt') };\nprint $@;","perl"],"select * from tt"]
+["create table t(x); begin; insert into t values (1)",["use DBI;\nprint DBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->selectrow_array('select count(*) from t');","perl"],"commit; select count(*) n from t"]
+
+# --- perl and php in one fiddle share the database too ---
+["create table t (x int)",["use DBI;\nDBI->connect('dbi:SQLite:dbname=/data/fiddle.db')->do('insert into t values (1)');","perl"],["<?php\necho (new PDO('sqlite:/data/fiddle.db'))->query('select count(*) from t')->fetchColumn();","php"]]
+
+# --- one process per batch: nothing carries over ---
+[["our $x = 1;","perl"],["print defined $main::x ? 'yes' : 'no';","perl"]]
+
+# --- stdout is a plain fence; stderr and a non-zero exit are error fences ---
+[["print '```';","perl"]]
+[["print \"café 日本語 🐦\";","perl"]]
+[["print \"a\\nb\\nc\\n\";","perl"]]
+[["print STDERR \"to stderr\\n\";","perl"]]
+[["print \"out\\n\";\nprint STDERR \"err\\n\";","perl"]]
+[["1;","perl"]]
+[["exit 3;","perl"]]
+[["die \"stop\\n\";","perl"]]
+[["my $x = 1 / 0;","perl"]]
+[["use strict;\n$undeclared = 1;","perl"]]
+[["use warnings;\nmy $u;\nprint 'v=' . $u;","perl"]]
+
 # --- a language nothing speaks is fenced, and only its own batch ---
 [["select 1 as before",""],["print(1)","node"],["select 2 as after",""]]
 [["print(1)","PYTHON"]]
 [["<?php echo 1;","PHP"]]
+[["print 1;","PERL"]]
 
 # --- malformed elements fail the payload, as a malformed array always has ---
 [["one","two","three"]]
